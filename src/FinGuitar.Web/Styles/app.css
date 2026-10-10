@@ -52,10 +52,11 @@
 }
 
 @layer base {
-  html { color-scheme: light; }
+  html { color-scheme: light; overflow-x: clip; }
   body { font-family: var(--font-sans); }
   body.theme-backstage { background: var(--color-backstage-bg); color: var(--color-backstage-text); color-scheme: dark; }
   body.theme-showroom { background: var(--color-showroom-bg); color: var(--color-showroom-ink); }
+  .grid > * { min-width: 0; }
   :focus-visible { outline: 2px solid var(--color-sunburst-deep); outline-offset: 2px; }
   .theme-backstage :focus-visible { outline-color: var(--color-sunburst); }
   @media (prefers-reduced-motion: reduce) {
