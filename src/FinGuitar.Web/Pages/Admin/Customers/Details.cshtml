@@ -1,0 +1,43 @@
+@page "{id:int}"
+@model FinGuitar.Web.Pages.Admin.Customers.DetailsModel
+@using FinGuitar.Web.Pages.Admin.Customers
+@{
+    var c = Model.Details.Customer;
+    ViewData["Title"] = c.Name;
+}
+
+<a asp-page="/Admin/Customers/Index" class="text-sm text-backstage-muted hover:underline">&larr; All customers</a>
+<h1 class="mt-1 font-display text-2xl font-semibold">@c.Name <span class="text-sm font-normal text-backstage-muted">#@c.Id</span></h1>
+
+<section class="card mt-4 p-4 text-sm" aria-labelledby="contact-h">
+    <h2 id="contact-h" class="font-semibold">Contact</h2>
+    <p class="mt-2 text-backstage-muted">@c.Email<br />@c.Phone<br />@c.Address</p>
+</section>
+
+<section class="mt-4" aria-labelledby="orders-h">
+    <h2 id="orders-h" class="mb-2 text-lg font-semibold">Order history</h2>
+    <div class="card overflow-x-auto">
+        @if (Model.Details.Orders.Count == 0)
+        {
+            <p class="p-4 text-sm text-backstage-muted">This customer has no orders.</p>
+        }
+        else
+        {
+            <table class="data-table">
+                <thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Status</th><th class="num">Total</th></tr></thead>
+                <tbody>
+                @foreach (var o in Model.Details.Orders)
+                {
+                    <tr>
+                        <td><a class="text-sunburst underline" asp-page="/Admin/Orders/Details" asp-route-id="@o.Id">#@o.Id</a></td>
+                        <td class="whitespace-nowrap">@UiHelpers.Stamp(o.OrderDate)</td>
+                        <td>@o.Items</td>
+                        <td><partial name="_StatusBadge" model="o.Status" /></td>
+                        <td class="num">@UiHelpers.Money(o.Total)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</section>

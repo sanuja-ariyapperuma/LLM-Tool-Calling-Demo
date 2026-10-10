@@ -1,3 +1,5 @@
+@inject CartService Cart
+@{ var cartCount = Cart.Count(); }
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,7 +15,7 @@
             <a asp-page="/Index" class="font-display text-2xl font-semibold">FinGuitar</a>
             <nav class="flex items-center gap-5 text-sm" aria-label="Main">
                 <a asp-page="/Index" class="hover:underline">Guitars</a>
-                <a asp-page="/Cart" class="hover:underline">Cart@(ViewData["CartCount"] is int n and > 0 ? $" ({n})" : "")</a>
+                <a asp-page="/Cart" class="hover:underline">Cart@(cartCount > 0 ? $" ({cartCount})" : "")</a>
                 <a asp-page="/Admin/Index" class="text-showroom-muted hover:underline">Admin</a>
             </nav>
         </div>

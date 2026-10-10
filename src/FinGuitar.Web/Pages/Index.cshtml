@@ -1,4 +1,47 @@
 @page
-@{ ViewData["Title"] = "FinGuitar"; }
-<h1 class="font-display text-3xl">FinGuitar</h1>
-<p class="mt-2 text-showroom-muted">The catalogue is coming up.</p>
+@model FinGuitar.Web.Pages.IndexModel
+@using FinGuitar.Web.Pages
+@{ ViewData["Title"] = "FinGuitar: guitars for every player"; }
+
+<section class="-mx-4 -mt-6 mb-8" aria-label="Welcome">
+    <div class="px-4 py-10 sm:py-14" style="background: linear-gradient(120deg, var(--color-sunburst-from), var(--color-sunburst-to));">
+        <div class="mx-auto max-w-6xl">
+            <div class="max-w-xl rounded-lg bg-white p-6 shadow-sm">
+                <h1 class="font-display text-3xl font-semibold sm:text-4xl">Find the guitar that feels like yours.</h1>
+                <p class="mt-3 text-showroom-muted">Electric, acoustic, bass and classical guitars from Fender, Gibson, Ibanez, PRS, Yamaha, Martin and Taylor.</p>
+                <a href="#catalogue" class="btn btn-primary mt-5">Browse guitars</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="catalogue" aria-labelledby="cat-h">
+    <h2 id="cat-h" class="font-display text-2xl font-semibold">All guitars</h2>
+    <ul class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        @foreach (var p in Model.Products)
+        {
+            <li class="group card overflow-hidden transition-shadow motion-safe:hover:-translate-y-0.5 hover:shadow-md">
+                <a asp-page="/Products/Details" asp-route-id="@p.Id" class="block">
+                    <div class="bg-showroom-stage" style="aspect-ratio: 4 / 3">
+                        <img src="@p.ImageUrl" alt="@p.Name" loading="lazy" width="800" height="600" class="h-full w-full object-contain" />
+                    </div>
+                    <div class="p-4">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-showroom-muted">@p.Brand · @p.Category</div>
+                        <h3 class="mt-1 font-display text-lg font-semibold">@p.Name</h3>
+                        <div class="mt-2 flex items-center justify-between">
+                            <span class="font-bold tabular-nums">@UiHelpers.Money(p.Price)</span>
+                            @if (p.Stock > 0)
+                            {
+                                <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">In stock</span>
+                            }
+                            else
+                            {
+                                <span class="rounded-full bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-700">Out of stock</span>
+                            }
+                        </div>
+                    </div>
+                </a>
+            </li>
+        }
+    </ul>
+</section>

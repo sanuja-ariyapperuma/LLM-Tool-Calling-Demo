@@ -1,0 +1,33 @@
+@page "{id:int}"
+@model FinGuitar.Web.Pages.Products.DetailsModel
+@using FinGuitar.Web.Pages.Products
+@{
+    var p = Model.Product;
+    ViewData["Title"] = $"{p.Name} · FinGuitar";
+}
+
+<a asp-page="/Index" class="text-sm text-showroom-muted hover:underline">&larr; All guitars</a>
+<div class="mt-4 grid gap-8 md:grid-cols-2">
+    <div class="rounded-lg bg-showroom-stage" style="aspect-ratio: 4 / 3">
+        <img src="@p.ImageUrl" alt="@p.Name" width="800" height="600" class="h-full w-full object-contain" />
+    </div>
+    <div>
+        <div class="text-xs font-semibold uppercase tracking-wide text-showroom-muted">@p.Brand · @p.Category</div>
+        <h1 class="mt-1 font-display text-3xl font-semibold">@p.Name</h1>
+        <p class="mt-4 text-2xl font-bold tabular-nums">@UiHelpers.Money(p.Price)</p>
+        <p class="mt-2">
+            @if (p.Stock > 0)
+            {
+                <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">In stock</span>
+            }
+            else
+            {
+                <span class="rounded-full bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-700">Out of stock</span>
+            }
+        </p>
+        <form method="post" asp-page="/Cart" asp-page-handler="Add" class="mt-6">
+            <input type="hidden" name="productId" value="@p.Id" />
+            <button type="submit" class="btn btn-primary" disabled="@(p.Stock <= 0)">Add to cart</button>
+        </form>
+    </div>
+</div>

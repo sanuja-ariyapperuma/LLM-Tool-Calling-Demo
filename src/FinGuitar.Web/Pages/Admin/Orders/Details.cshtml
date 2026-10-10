@@ -1,0 +1,118 @@
+@page "{id:int}"
+@model FinGuitar.Web.Pages.Admin.Orders.DetailsModel
+@using FinGuitar.Web.Pages.Admin.Orders
+@{
+    var order = Model.Details.Order;
+    var customer = Model.Details.Customer;
+    ViewData["Title"] = $"Order {order.Id}";
+    var isLevel1 = User.IsInRole(Roles.Level1);
+}
+
+<a asp-page="/Admin/Orders/Index" class="text-sm text-backstage-muted hover:underline">&larr; All orders</a>
+<h1 class="mt-1 font-display text-2xl font-semibold">Order #@order.Id <partial name="_StatusBadge" model="order.Status" /></h1>
+
+@if (Model.Message is not null)
+{
+    <div role="status" class="mt-3 rounded-md border border-emerald-500 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">@Model.Message</div>
+}
+@if (!ViewData.ModelState.IsValid)
+{
+    <div role="alert" class="mt-3 rounded-md border border-rose-400 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
+        @foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors)) { <div>@e.ErrorMessage</div> }
+    </div>
+}
+
+<div class="mt-4 grid gap-4 lg:grid-cols-3">
+    <section class="card p-4 text-sm" aria-labelledby="cust-h">
+        <h2 id="cust-h" class="font-semibold">Customer</h2>
+        <p class="mt-2"><a class="text-sunburst underline" asp-page="/Admin/Customers/Details" asp-route-id="@customer.Id">@customer.Name</a></p>
+        <p class="text-backstage-muted">@customer.Email<br />@customer.Phone<br />@customer.Address</p>
+        <p class="mt-3 text-backstage-muted">Placed @UiHelpers.Stamp(order.OrderDate)</p>
+    </section>
+
+    <section class="card p-4 text-sm lg:col-span-2" aria-labelledby="lines-h">
+        <h2 id="lines-h" class="font-semibold">Items</h2>
+        <div class="mt-2 overflow-x-auto">
+            <table class="data-table">
+                <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Line total</th></tr></thead>
+                <tbody>
+                @foreach (var l in order.Lines)
+                {
+                    <tr>
+                        <td><a class="underline" asp-page="/Admin/Products/Details" asp-route-id="@l.ProductId">@l.ProductName</a></td>
+                        <td class="num">@l.Quantity</td>
+                        <td class="num">@UiHelpers.Money(l.UnitPrice)</td>
+                        <td class="num">@UiHelpers.Money(l.LineTotal)</td>
+                    </tr>
+                }
+                </tbody>
+                <tfoot><tr><td colspan="3" class="px-3 py-2 text-right font-semibold">Total</td><td class="num px-3 py-2 font-semibold">@UiHelpers.Money(order.Total)</td></tr></tfoot>
+            </table>
+        </div>
+    </section>
+</div>
+
+<section class="card mt-4 p-4 text-sm" aria-labelledby="status-h">
+    <h2 id="status-h" class="font-semibold">Change status</h2>
+    @if (Model.AllowedNext.Count == 0)
+    {
+        <p class="mt-2 text-backstage-muted">This order is @order.Status and cannot be changed.</p>
+    }
+    else if (!isLevel1)
+    {
+        <p class="mt-2 text-backstage-muted">Your account is read only, so you cannot change the status.</p>
+    }
+    else if (Model.ShowCancelPanel)
+    {
+        <div class="mt-3 rounded-md border border-rose-400 p-4" role="alertdialog" aria-labelledby="cancel-h">
+            <h3 id="cancel-h" class="font-semibold text-rose-200">Cancelling order @order.Id cannot be undone.</h3>
+            <p class="mt-1 text-backstage-muted">The customer's order will be closed.</p>
+            <div class="mt-3 flex flex-wrap gap-2">
+                <form method="post" asp-page-handler="Status" asp-route-id="@order.Id">
+                    <input type="hidden" name="newStatus" value="Cancelled" />
+                    <button type="submit" class="btn btn-danger">Yes, cancel order @order.Id</button>
+                </form>
+                <a asp-page="/Admin/Orders/Details" asp-route-id="@order.Id" class="btn btn-ghost">Keep order</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="mt-3 flex flex-wrap gap-2">
+            @foreach (var next in Model.AllowedNext)
+            {
+                if (next == OrderStatus.Cancelled)
+                {
+                    <a asp-page="/Admin/Orders/Details" asp-route-id="@order.Id" asp-route-confirm="cancel" class="btn btn-ghost">Cancel order</a>
+                }
+                else
+                {
+                    <form method="post" asp-page-handler="Status" asp-route-id="@order.Id">
+                        <input type="hidden" name="newStatus" value="@next" />
+                        <button type="submit" class="btn btn-primary">Mark as @next</button>
+                    </form>
+                }
+            }
+        </div>
+    }
+</section>
+
+<section class="card mt-4 p-4 text-sm" aria-labelledby="hist-h">
+    <div class="flex items-center justify-between">
+        <h2 id="hist-h" class="font-semibold">History</h2>
+        <a class="text-sunburst underline" asp-page="/Admin/Audit/Index" asp-route-entityType="Order" asp-route-entityId="@order.Id">All changes to this order</a>
+    </div>
+    @if (Model.History.Count == 0)
+    {
+        <p class="mt-2 text-backstage-muted">No changes have been made to this order yet.</p>
+    }
+    else
+    {
+        <ul class="mt-2 space-y-1">
+            @foreach (var h in Model.History)
+            {
+                <li>@UiHelpers.Stamp(h.OccurredAt) · @h.UserEmail · @h.Summary · <span class="text-backstage-muted">@UiHelpers.SourceLabel(h.Source)</span></li>
+            }
+        </ul>
+    }
+</section>

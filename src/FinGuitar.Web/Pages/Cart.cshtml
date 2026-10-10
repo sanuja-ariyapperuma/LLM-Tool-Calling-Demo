@@ -1,0 +1,49 @@
+@page
+@model FinGuitar.Web.Pages.CartModel
+@using FinGuitar.Web.Pages
+@{ ViewData["Title"] = "Your cart · FinGuitar"; }
+
+<h1 class="font-display text-3xl font-semibold">Your cart</h1>
+
+@if (Model.Notice is not null)
+{
+    <div role="alert" class="mt-3 rounded-md border border-amber-600 bg-amber-50 px-3 py-2 text-sm text-amber-900">@Model.Notice</div>
+}
+
+@if (Model.View.Lines.Count == 0)
+{
+    <p class="mt-4 text-showroom-muted">Your cart is empty. <a asp-page="/Index" class="underline">Browse the guitars</a>.</p>
+}
+else
+{
+    <div class="mt-4 grid gap-6 lg:grid-cols-3">
+        <ul class="space-y-4 lg:col-span-2">
+            @foreach (var line in Model.View.Lines)
+            {
+                <li class="card flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
+                    <img src="@line.Product.ImageUrl" alt="@line.Product.Name" width="96" height="72" class="h-18 w-24 rounded bg-showroom-stage object-contain" />
+                    <div class="flex-1">
+                        <a asp-page="/Products/Details" asp-route-id="@line.Product.Id" class="font-display text-lg font-semibold hover:underline">@line.Product.Name</a>
+                        <div class="text-sm text-showroom-muted tabular-nums">@UiHelpers.Money(line.Product.Price) each · @line.Product.Stock in stock</div>
+                    </div>
+                    <form method="post" asp-page-handler="Update" class="flex items-center gap-2">
+                        <input type="hidden" name="productId" value="@line.Product.Id" />
+                        <label class="sr-only" for="qty-@line.Product.Id">Quantity for @line.Product.Name</label>
+                        <input id="qty-@line.Product.Id" type="number" name="quantity" value="@line.Quantity" min="1" max="@line.Product.Stock" class="input w-20" />
+                        <button type="submit" class="btn btn-ghost">Update</button>
+                    </form>
+                    <div class="w-24 text-right font-semibold tabular-nums">@UiHelpers.Money(line.LineTotal)</div>
+                    <form method="post" asp-page-handler="Remove">
+                        <input type="hidden" name="productId" value="@line.Product.Id" />
+                        <button type="submit" class="btn btn-ghost" aria-label="Remove @line.Product.Name">Remove</button>
+                    </form>
+                </li>
+            }
+        </ul>
+
+        <aside class="card h-fit p-4" aria-label="Cart total">
+            <div class="flex justify-between text-lg font-semibold"><span>Total</span><span class="tabular-nums">@UiHelpers.Money(Model.View.Total)</span></div>
+            <p class="mt-3 text-sm text-showroom-muted">Checkout is not part of this demo.</p>
+        </aside>
+    </div>
+}

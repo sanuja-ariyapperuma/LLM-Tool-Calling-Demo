@@ -1,0 +1,22 @@
+@page "/Error/{code?}"
+@using Microsoft.AspNetCore.Diagnostics
+@{
+    var code = HttpContext.Request.RouteValues["code"]?.ToString();
+    var original = HttpContext.Features.Get<IStatusCodeReExecuteFeature>()?.OriginalPath
+                   ?? HttpContext.Features.Get<IExceptionHandlerPathFeature>()?.Path ?? "";
+    var admin = original.StartsWith("/Admin", StringComparison.OrdinalIgnoreCase)
+                || original.StartsWith("/Account", StringComparison.OrdinalIgnoreCase);
+    Layout = admin ? "_AdminLayout" : "_StoreLayout";
+    var (title, text) = code switch
+    {
+        "403" => ("You do not have permission", "Your account can view this data but not change it. Ask a Level1 admin to make the change."),
+        "404" => ("Not found", "That page or record does not exist."),
+        _ => ("Something went wrong", "The request could not be completed. Please try again."),
+    };
+    ViewData["Title"] = title;
+}
+<div class="mx-auto mt-10 max-w-md @(admin ? "card p-6" : "")">
+    <h1 class="@(admin ? "text-xl font-semibold" : "font-display text-2xl")">@title</h1>
+    <p class="mt-2 text-sm @(admin ? "text-backstage-muted" : "text-showroom-muted")">@text</p>
+    <a href="@(admin ? "/Admin" : "/")" class="btn btn-ghost mt-4">Go back</a>
+</div>

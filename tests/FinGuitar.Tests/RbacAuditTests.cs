@@ -76,6 +76,17 @@ public class AuditTests
     }
 
     [Fact]
+    public async Task Timestamps_are_stored_as_text_in_one_format_even_with_fractional_seconds()
+    {
+        await using var e = await TestEnv.CreateAsync(now: new DateTime(2026, 10, 9, 12, 30, 15).AddTicks(1234567));
+        await e.Orders.ChangeStatusAsync(42, OrderStatus.Dispatched);
+
+        await using var conn = await e.Db.Db.OpenAsync();
+        Assert.Equal("2026-10-09 12:30:15", await conn.ExecuteScalarAsync<string>("SELECT occurred_at FROM audit_entries"));
+        Assert.Equal(new DateTime(2026, 10, 9, 12, 30, 15), Assert.Single(await Entries(e)).OccurredAt);
+    }
+
+    [Fact]
     public async Task Product_create_and_update_each_write_one_entry()
     {
         await using var e = await TestEnv.CreateAsync();

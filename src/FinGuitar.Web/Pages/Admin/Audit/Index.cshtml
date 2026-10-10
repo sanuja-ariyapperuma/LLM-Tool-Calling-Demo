@@ -1,0 +1,89 @@
+@page
+@model FinGuitar.Web.Pages.Admin.Audit.IndexModel
+@using FinGuitar.Web.Pages.Admin.Audit
+@{ ViewData["Title"] = "Audit"; }
+
+<h1 class="font-display text-2xl font-semibold">Audit trail</h1>
+<p class="mt-1 text-sm text-backstage-muted">Every change to orders and products, newest first. Entries cannot be edited or deleted.</p>
+
+<form method="get" class="card mt-4 grid grid-cols-2 gap-3 p-4 text-sm lg:grid-cols-6" aria-label="Filter the audit trail">
+    <div><label asp-for="DateFrom" class="mb-1 block text-backstage-muted">Date from</label><input asp-for="DateFrom" type="date" class="input" /></div>
+    <div><label asp-for="DateTo" class="mb-1 block text-backstage-muted">Date to</label><input asp-for="DateTo" type="date" class="input" /></div>
+    <div>
+        <label asp-for="Source" class="mb-1 block text-backstage-muted">Source</label>
+        <select asp-for="Source" class="input">
+            <option value="">All</option>
+            <option value="Chat" selected="@(Model.Source == ChangeSource.Chat)">Chat</option>
+            <option value="AdminPanel" selected="@(Model.Source == ChangeSource.AdminPanel)">Admin panel</option>
+        </select>
+    </div>
+    <div>
+        <label asp-for="UserId" class="mb-1 block text-backstage-muted">User</label>
+        <select asp-for="UserId" class="input">
+            <option value="">Anyone</option>
+            @foreach (var u in Model.Users) { <option value="@u.UserId" selected="@(Model.UserId == u.UserId)">@u.UserEmail</option> }
+        </select>
+    </div>
+    <div>
+        <label asp-for="EntityType" class="mb-1 block text-backstage-muted">Entity</label>
+        <select asp-for="EntityType" class="input">
+            <option value="">Any</option>
+            <option value="Order" selected="@(Model.EntityType == "Order")">Order</option>
+            <option value="Product" selected="@(Model.EntityType == "Product")">Product</option>
+        </select>
+    </div>
+    <div><label asp-for="EntityId" class="mb-1 block text-backstage-muted">Entity id</label><input asp-for="EntityId" type="number" min="1" class="input" /></div>
+    <div class="col-span-2 flex items-end gap-2 lg:col-span-6">
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a asp-page="/Admin/Audit/Index" class="btn btn-ghost">Clear</a>
+        <span class="ml-auto text-backstage-muted">@Model.Result.TotalCount entries</span>
+    </div>
+</form>
+
+<div class="card mt-4 overflow-x-auto">
+    @if (Model.Result.TotalCount == 0)
+    {
+        <p class="p-4 text-sm text-backstage-muted">No changes yet. Change an order's status or a product's price to see an entry here.</p>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead><tr><th>Time</th><th>User</th><th>Source</th><th>Entity</th><th>Change</th></tr></thead>
+            <tbody>
+            @foreach (var e in Model.Result.Rows)
+            {
+                <tr>
+                    <td class="whitespace-nowrap">@UiHelpers.Stamp(e.OccurredAt)</td>
+                    <td>@e.UserEmail <span class="badge badge-neutral">@e.UserRole</span></td>
+                    <td>@UiHelpers.SourceLabel(e.Source)</td>
+                    <td>
+                        @if (e.EntityType == "Order")
+                        {
+                            <a class="text-sunburst underline" asp-page="/Admin/Orders/Details" asp-route-id="@e.EntityId">Order @e.EntityId</a>
+                        }
+                        else
+                        {
+                            <a class="text-sunburst underline" asp-page="/Admin/Products/Details" asp-route-id="@e.EntityId">Product @e.EntityId</a>
+                        }
+                    </td>
+                    <td>
+                        <details>
+                            <summary class="cursor-pointer">@e.Summary</summary>
+                            <table class="mt-2 text-xs">
+                                <thead><tr><th class="pr-4 text-left text-backstage-muted">Field</th><th class="pr-4 text-left text-backstage-muted">Old</th><th class="text-left text-backstage-muted">New</th></tr></thead>
+                                <tbody>
+                                @foreach (var c in Model.ChangesOf(e))
+                                {
+                                    <tr><td class="pr-4">@c.Field</td><td class="pr-4">@(c.Old ?? "—")</td><td>@(c.New ?? "—")</td></tr>
+                                }
+                                </tbody>
+                            </table>
+                        </details>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>
+<partial name="_Pager" model='(Model.Result.Page, Model.Result.TotalPages, Model.RouteValues(), "/Admin/Audit/Index")' />

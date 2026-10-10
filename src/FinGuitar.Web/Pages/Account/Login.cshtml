@@ -1,0 +1,43 @@
+@page
+@model FinGuitar.Web.Pages.Account.LoginModel
+@using FinGuitar.Web.Pages.Account
+@{ ViewData["Title"] = "Sign in"; }
+
+<div class="mx-auto mt-10 w-full max-w-md">
+    <div class="card p-6">
+        <h1 class="font-display text-2xl font-semibold">FinGuitar <span class="font-sans text-sm text-backstage-muted">Backstage</span></h1>
+        <p class="mt-1 text-sm text-backstage-muted">Sign in to manage orders, products and customers.</p>
+
+        @if (Model.Error is not null)
+        {
+            <div role="alert" class="mt-4 rounded-md border border-rose-400 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">@Model.Error</div>
+        }
+
+        <form method="post" class="mt-5 space-y-4">
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div>
+                <label asp-for="Email" class="mb-1 block text-sm font-medium">Email</label>
+                <input asp-for="Email" class="input" autocomplete="username" inputmode="email" />
+                <span asp-validation-for="Email" class="text-sm text-rose-300"></span>
+            </div>
+            <div>
+                <label asp-for="Password" class="mb-1 block text-sm font-medium">Password</label>
+                <input asp-for="Password" type="password" class="input" autocomplete="current-password" />
+                <span asp-validation-for="Password" class="text-sm text-rose-300"></span>
+            </div>
+            <button type="submit" class="btn btn-primary w-full">Sign in</button>
+        </form>
+    </div>
+
+    <div class="card mt-4 p-4 text-sm">
+        <h2 class="font-semibold">Demo logins</h2>
+        <p class="mt-1 text-backstage-muted">This is a demo. These passwords are public.</p>
+        <table class="data-table mt-2">
+            <thead><tr><th>Role</th><th>Email</th><th>Password</th></tr></thead>
+            <tbody>
+                <tr><td>Level1 <span class="text-backstage-muted">(full access)</span></td><td>level1@finguitar.local</td><td>Demo@Level1</td></tr>
+                <tr><td>Level2 <span class="text-backstage-muted">(read only)</span></td><td>level2@finguitar.local</td><td>Demo@Level2</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>

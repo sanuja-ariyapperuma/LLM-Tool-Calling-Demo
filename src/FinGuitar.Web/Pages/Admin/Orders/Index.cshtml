@@ -1,0 +1,52 @@
+@page
+@model FinGuitar.Web.Pages.Admin.Orders.IndexModel
+@using FinGuitar.Web.Pages.Admin.Orders
+@{ ViewData["Title"] = "Orders"; }
+
+<h1 class="font-display text-2xl font-semibold">Orders</h1>
+
+<form method="get" class="card mt-4 grid grid-cols-2 gap-3 p-4 text-sm lg:grid-cols-4" aria-label="Filter orders">
+    <div><label asp-for="OrderId" class="mb-1 block text-backstage-muted">Order id</label><input asp-for="OrderId" type="number" min="1" class="input" /></div>
+    <div>
+        <label asp-for="Status" class="mb-1 block text-backstage-muted">Status</label>
+        <select asp-for="Status" asp-items="Html.GetEnumSelectList<OrderStatus>()" class="input"><option value="">Any</option></select>
+    </div>
+    <div><label asp-for="DateFrom" class="mb-1 block text-backstage-muted">Date from</label><input asp-for="DateFrom" type="date" class="input" /></div>
+    <div><label asp-for="DateTo" class="mb-1 block text-backstage-muted">Date to</label><input asp-for="DateTo" type="date" class="input" /></div>
+    <div><label asp-for="Customer" class="mb-1 block text-backstage-muted">Customer name</label><input asp-for="Customer" class="input" /></div>
+    <div><label asp-for="Product" class="mb-1 block text-backstage-muted">Product name</label><input asp-for="Product" class="input" /></div>
+    <div><label asp-for="MinTotal" class="mb-1 block text-backstage-muted">Total from</label><input asp-for="MinTotal" type="number" step="0.01" min="0" class="input" /></div>
+    <div><label asp-for="MaxTotal" class="mb-1 block text-backstage-muted">Total to</label><input asp-for="MaxTotal" type="number" step="0.01" min="0" class="input" /></div>
+    <div class="col-span-2 flex items-end gap-2 lg:col-span-4">
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a asp-page="/Admin/Orders/Index" class="btn btn-ghost">Clear</a>
+        <span class="ml-auto text-backstage-muted">@Model.Result.TotalCount orders</span>
+    </div>
+</form>
+
+<div class="card mt-4 overflow-x-auto">
+    @if (Model.Result.Rows.Count == 0)
+    {
+        <p class="p-4 text-sm text-backstage-muted">No orders match these filters. Try loosening them.</p>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Items</th><th>Status</th><th class="num">Total</th></tr></thead>
+            <tbody>
+            @foreach (var o in Model.Result.Rows)
+            {
+                <tr>
+                    <td><a class="text-sunburst underline" asp-page="/Admin/Orders/Details" asp-route-id="@o.Id">#@o.Id</a></td>
+                    <td class="whitespace-nowrap">@UiHelpers.Stamp(o.OrderDate)</td>
+                    <td><a class="underline" asp-page="/Admin/Customers/Details" asp-route-id="@o.CustomerId">@o.CustomerName</a></td>
+                    <td>@o.Items</td>
+                    <td><partial name="_StatusBadge" model="o.Status" /></td>
+                    <td class="num">@UiHelpers.Money(o.Total)</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>
+<partial name="_Pager" model='(Model.Result.Page, Model.Result.TotalPages, Model.RouteValues(), "/Admin/Orders/Index")' />

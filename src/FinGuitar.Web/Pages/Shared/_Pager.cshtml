@@ -1,0 +1,25 @@
+@* Previous / Next for a paged list. Model: (page, totalPages, route values of the current filters). *@
+@model (int Page, int TotalPages, IDictionary<string, string?> Route, string PageName)
+@{
+    IDictionary<string, string?> With(int p)
+    {
+        var d = new Dictionary<string, string?>(Model.Route) { ["p"] = p.ToString() };
+        return d;
+    }
+}
+@if (Model.TotalPages > 1)
+{
+    <nav class="mt-4 flex items-center justify-between text-sm" aria-label="Pages">
+        @if (Model.Page > 1)
+        {
+            <a class="btn btn-ghost" asp-page="@Model.PageName" asp-all-route-data="With(Model.Page - 1)">Previous</a>
+        }
+        else { <span></span> }
+        <span class="text-backstage-muted">Page @Model.Page of @Model.TotalPages</span>
+        @if (Model.Page < Model.TotalPages)
+        {
+            <a class="btn btn-ghost" asp-page="@Model.PageName" asp-all-route-data="With(Model.Page + 1)">Next</a>
+        }
+        else { <span></span> }
+    </nav>
+}

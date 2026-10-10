@@ -1,0 +1,38 @@
+@page
+@model FinGuitar.Web.Pages.Admin.Customers.IndexModel
+@using FinGuitar.Web.Pages.Admin.Customers
+@{ ViewData["Title"] = "Customers"; }
+
+<h1 class="font-display text-2xl font-semibold">Customers</h1>
+
+<form method="get" class="card mt-4 flex flex-wrap items-end gap-3 p-4 text-sm" aria-label="Search customers">
+    <div class="min-w-48 flex-1"><label asp-for="Text" class="mb-1 block text-backstage-muted">Name, email or phone</label><input asp-for="Text" class="input" /></div>
+    <button type="submit" class="btn btn-primary">Search</button>
+    <a asp-page="/Admin/Customers/Index" class="btn btn-ghost">Clear</a>
+    <span class="ml-auto text-backstage-muted">@Model.Result.TotalCount customers</span>
+</form>
+
+<div class="card mt-4 overflow-x-auto">
+    @if (Model.Result.Rows.Count == 0)
+    {
+        <p class="p-4 text-sm text-backstage-muted">No customers match.</p>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th class="num">Orders</th></tr></thead>
+            <tbody>
+            @foreach (var c in Model.Result.Rows)
+            {
+                <tr>
+                    <td><a class="text-sunburst underline" asp-page="/Admin/Customers/Details" asp-route-id="@c.Id">@c.Name</a></td>
+                    <td>@c.Email</td>
+                    <td>@c.Phone</td>
+                    <td class="num">@c.OrderCount</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>
+<partial name="_Pager" model='(Model.Result.Page, Model.Result.TotalPages, Model.RouteValues(), "/Admin/Customers/Index")' />

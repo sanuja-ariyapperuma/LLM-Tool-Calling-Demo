@@ -1,0 +1,69 @@
+@page
+@model FinGuitar.Web.Pages.Admin.IndexModel
+@using FinGuitar.Web.Pages.Admin
+@{ ViewData["Title"] = "Dashboard"; }
+
+<h1 class="font-display text-2xl font-semibold">Dashboard</h1>
+
+<section class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Key numbers">
+    <div class="card p-4"><div class="text-xs uppercase tracking-wide text-backstage-muted">Orders today</div><div class="mt-1 text-3xl font-semibold tabular-nums">@Model.Today.TotalCount</div></div>
+    <div class="card p-4"><div class="text-xs uppercase tracking-wide text-backstage-muted">Pending orders</div><div class="mt-1 text-3xl font-semibold tabular-nums">@Model.Dashboard.PendingCount</div></div>
+    <div class="card p-4"><div class="text-xs uppercase tracking-wide text-backstage-muted">Revenue today</div><div class="mt-1 text-3xl font-semibold tabular-nums">@UiHelpers.Money(Model.Dashboard.Today.Revenue)</div></div>
+    <div class="card p-4"><div class="text-xs uppercase tracking-wide text-backstage-muted">Revenue this week</div><div class="mt-1 text-3xl font-semibold tabular-nums">@UiHelpers.Money(Model.Dashboard.Week.Revenue)</div><div class="text-xs text-backstage-muted">Since Monday, not counting cancelled orders</div></div>
+</section>
+
+<div class="mt-6 grid gap-6 xl:grid-cols-3">
+    <section class="xl:col-span-2" aria-labelledby="today-h">
+        <h2 id="today-h" class="mb-2 text-lg font-semibold">Today's orders</h2>
+        <div class="card overflow-x-auto">
+            @if (Model.Today.Rows.Count == 0)
+            {
+                <p class="p-4 text-sm text-backstage-muted">No orders yet today.</p>
+            }
+            else
+            {
+                <table class="data-table">
+                    <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Status</th><th class="num">Total</th></tr></thead>
+                    <tbody>
+                    @foreach (var o in Model.Today.Rows)
+                    {
+                        <tr>
+                            <td><a class="text-sunburst underline" asp-page="/Admin/Orders/Details" asp-route-id="@o.Id">#@o.Id</a></td>
+                            <td>@o.CustomerName</td>
+                            <td>@o.Items</td>
+                            <td><partial name="_StatusBadge" model="o.Status" /></td>
+                            <td class="num">@UiHelpers.Money(o.Total)</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </section>
+
+    <section aria-labelledby="top-h">
+        <h2 id="top-h" class="mb-2 text-lg font-semibold">Top sellers this week</h2>
+        <div class="card overflow-x-auto">
+            @if (Model.Dashboard.TopProductsThisWeek.Count == 0)
+            {
+                <p class="p-4 text-sm text-backstage-muted">No sales yet this week.</p>
+            }
+            else
+            {
+                <table class="data-table">
+                    <thead><tr><th>Product</th><th class="num">Units</th><th class="num">Revenue</th></tr></thead>
+                    <tbody>
+                    @foreach (var t in Model.Dashboard.TopProductsThisWeek)
+                    {
+                        <tr>
+                            <td><a class="text-sunburst underline" asp-page="/Admin/Products/Details" asp-route-id="@t.ProductId">@t.Name</a></td>
+                            <td class="num">@t.Units</td>
+                            <td class="num">@UiHelpers.Money(t.Revenue)</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </section>
+</div>

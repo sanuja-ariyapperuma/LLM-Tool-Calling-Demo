@@ -19,6 +19,11 @@ public static class DapperSetup
         {
             if (_done) return;
             DefaultTypeMap.MatchNamesWithUnderscores = true;
+            // Dapper's built-in mappings win over handlers for parameters, so remove them first.
+            SqlMapper.RemoveTypeMap(typeof(DateTime));
+            SqlMapper.RemoveTypeMap(typeof(DateTime?));
+            SqlMapper.RemoveTypeMap(typeof(Guid));
+            SqlMapper.RemoveTypeMap(typeof(Guid?));
             SqlMapper.AddTypeHandler(new DateTimeHandler());
             SqlMapper.AddTypeHandler(new GuidHandler());
             _done = true;
@@ -35,7 +40,7 @@ public static class DapperSetup
 
         public override DateTime Parse(object value) => value is DateTime d
             ? d
-            : DateTime.ParseExact((string)value, DateFormat, CultureInfo.InvariantCulture);
+            : DateTime.Parse((string)value, CultureInfo.InvariantCulture);
     }
 
     private sealed class GuidHandler : SqlMapper.TypeHandler<Guid>

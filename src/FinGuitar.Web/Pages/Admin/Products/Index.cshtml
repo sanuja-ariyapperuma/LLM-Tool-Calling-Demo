@@ -1,0 +1,57 @@
+@page
+@model FinGuitar.Web.Pages.Admin.Products.IndexModel
+@using FinGuitar.Web.Pages.Admin.Products
+@{ ViewData["Title"] = "Products"; }
+
+<div class="flex items-center justify-between">
+    <h1 class="font-display text-2xl font-semibold">Products</h1>
+    @if (User.IsInRole(Roles.Level1))
+    {
+        <a asp-page="/Admin/Products/Create" class="btn btn-primary">New product</a>
+    }
+</div>
+
+<form method="get" class="card mt-4 flex flex-wrap items-end gap-3 p-4 text-sm" aria-label="Filter products">
+    <div class="min-w-48 flex-1"><label asp-for="Text" class="mb-1 block text-backstage-muted">Name, brand or category</label><input asp-for="Text" class="input" /></div>
+    <label class="flex items-center gap-2 pb-2"><input asp-for="LowStockOnly" type="checkbox" value="true" /> Low stock only (3 or fewer)</label>
+    <button type="submit" class="btn btn-primary">Filter</button>
+    <a asp-page="/Admin/Products/Index" class="btn btn-ghost">Clear</a>
+    <span class="ml-auto text-backstage-muted">@Model.Result.TotalCount products</span>
+</form>
+
+<div class="card mt-4 overflow-x-auto">
+    @if (Model.Result.Rows.Count == 0)
+    {
+        <p class="p-4 text-sm text-backstage-muted">No products match.</p>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead><tr><th>Photo</th><th>Product</th><th>Brand</th><th>Category</th><th class="num">Price</th><th class="num">Stock</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var p in Model.Result.Rows)
+            {
+                <tr>
+                    <td><img src="@p.ImageUrl" alt="@p.Name" width="48" height="48" loading="lazy" class="h-12 w-12 rounded object-cover" /></td>
+                    <td><a class="text-sunburst underline" asp-page="/Admin/Products/Details" asp-route-id="@p.Id">@p.Name</a> <span class="text-xs text-backstage-muted">#@p.Id</span></td>
+                    <td>@p.Brand</td>
+                    <td>@p.Category</td>
+                    <td class="num">@UiHelpers.Money(p.Price)</td>
+                    <td class="num">
+                        @p.Stock
+                        @if (p.Stock == 0) { <span class="badge badge-cancelled">Out of stock</span> }
+                        else if (p.IsLowStock) { <span class="badge badge-pending">Low</span> }
+                    </td>
+                    <td>
+                        @if (User.IsInRole(Roles.Level1))
+                        {
+                            <a class="underline" asp-page="/Admin/Products/Edit" asp-route-id="@p.Id">Edit</a>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>
+<partial name="_Pager" model='(Model.Result.Page, Model.Result.TotalPages, Model.RouteValues(), "/Admin/Products/Index")' />
