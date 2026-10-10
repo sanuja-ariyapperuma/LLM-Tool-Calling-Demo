@@ -111,7 +111,7 @@ sequenceDiagram
     participant Svc as OrderService
 
     Admin->>PA: Confirm (first)
-    PA-->>Admin: no data change; the server posts a final card:<br/>"Cancelling order 43 cannot be undone."
+    PA-->>Admin: no data change, the server posts a final card:<br/>"Cancelling order 43 cannot be undone."
     Admin->>PA: "Yes, cancel order 43" (second)
     PA->>Svc: ChangeStatusAsync(43, Cancelled)
     PA-->>Admin: "Order 43 is now Cancelled." (audit: confirmed twice)
