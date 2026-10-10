@@ -135,7 +135,10 @@ public class ChatService(
                 continue;
             }
             var summary = ChatPayloadJson.Summarise(m.PayloadKind, m.PayloadJson);
-            list.Add(new AiMessage(ChatRole.Assistant, summary is null ? m.Text : $"{m.Text}\n{summary}"));
+            // A small model copies earlier wording such as "I have proposed ... Please confirm" instead of calling the
+            // tool again, so a card turn goes into history as the note alone, never as that sentence.
+            var isCard = m.PayloadKind is PayloadKinds.ProposalCard or PayloadKinds.FinalConfirmCard;
+            list.Add(new AiMessage(ChatRole.Assistant, summary is null ? m.Text : isCard ? summary : $"{m.Text}\n{summary}"));
         }
         return list;
     }

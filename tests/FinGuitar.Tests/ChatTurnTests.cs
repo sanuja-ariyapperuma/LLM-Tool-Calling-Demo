@@ -259,6 +259,24 @@ public class ChatTurnTests
     }
 
     [Fact]
+    public async Task A_card_turn_goes_into_history_as_a_note_not_as_wording_the_model_could_copy()
+    {
+        await using var c = await ChatTestEnv.CreateAsync();
+        var client = new ScriptedClient((msgs, o) => msgs.Count(m => m.Role == ChatRole.User) == 1 && !ScriptedClient.LastIsToolResult(msgs)
+            ? ScriptedClient.Call("propose_order_status_change", ("orderId", 42), ("newStatus", "Dispatched"))
+            : ScriptedClient.LastIsToolResult(msgs) ? ScriptedClient.Say("I have proposed dispatching order 42. Please confirm.") : ScriptedClient.Say("ok"));
+        var svc = NewService(c, client);
+
+        var first = await svc.SendAsync(null, "order 42 is dispatched");
+        Assert.Equal(PayloadKinds.ProposalCard, first.NewMessages[1].PayloadKind);
+        await svc.SendAsync(first.Conversation.Id, "cancel order 43");
+
+        var assistant = client.Seen[^1].Messages.Where(m => m.Role == ChatRole.Assistant).Select(m => m.Text).ToList();
+        Assert.Contains(assistant, t => t.StartsWith("[Shown: confirmation card:"));
+        Assert.DoesNotContain(assistant, t => t.Contains("I have proposed"));
+    }
+
+    [Fact]
     public async Task Think_text_is_stripped_before_saving()
     {
         await using var c = await ChatTestEnv.CreateAsync();
