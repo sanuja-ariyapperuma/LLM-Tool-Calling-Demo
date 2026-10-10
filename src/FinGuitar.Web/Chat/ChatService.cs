@@ -60,7 +60,7 @@ public class ChatService(
         var payload = log.Choose();
         replyText = FlagFalseConfirmation(replyText);
         if (string.IsNullOrWhiteSpace(replyText))
-            replyText = payload is null ? "I'm not sure how to help with that. Try asking about orders, products, customers or sales." : "Here is what I found.";
+            replyText = payload is null ? "I'm not sure how to help with that. Try asking about orders, products, customers or sales." : payload.Kind == PayloadKinds.ProposalCard ? "Please review the change below and confirm it." : "Here is what I found.";
 
         // Transaction 2: the assistant message with its payload, and the proposal's link to it.
         ChatMessage assistant, userMessage;
