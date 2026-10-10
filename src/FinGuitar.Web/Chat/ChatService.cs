@@ -58,6 +58,7 @@ public class ChatService(
         var (replyText, isError) = await AskModelAsync(convId);
 
         var payload = log.Choose();
+        replyText = FlagFalseConfirmation(replyText);
         if (string.IsNullOrWhiteSpace(replyText))
             replyText = payload is null ? "I'm not sure how to help with that. Try asking about orders, products, customers or sales." : "Here is what I found.";
 
@@ -138,6 +139,18 @@ public class ChatService(
         }
         return list;
     }
+
+    public const string NoCardNote = "No confirmation card was created, so nothing has been proposed or changed. Please rephrase your request.";
+
+    /// <summary>
+    /// A small model sometimes says "please confirm" without calling a propose tool. There is then no card to click,
+    /// so say so plainly instead of leaving the user waiting for one.
+    /// </summary>
+    private string FlagFalseConfirmation(string text) =>
+        !log.ProposalMade && !string.IsNullOrWhiteSpace(text)
+        && System.Text.RegularExpressions.Regex.IsMatch(text, @"(please confirm|confirm (this|the) change|I'?ve proposed|I have proposed|has been proposed)", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+            ? $"{text}\n{NoCardNote}"
+            : text;
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max];
 }

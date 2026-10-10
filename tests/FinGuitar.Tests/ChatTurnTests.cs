@@ -240,9 +240,22 @@ public class ChatTurnTests
     public async Task A_copied_Shown_note_is_removed_from_the_reply()
     {
         await using var c = await ChatTestEnv.CreateAsync();
-        var svc = NewService(c, new ScriptedClient((_, _) => ScriptedClient.Say("Please confirm. [Shown: confirmation card: Change order 44] Thanks.")));
+        var svc = NewService(c, new ScriptedClient((_, _) => ScriptedClient.Say("Here you go. [Shown: orders 1, 2] Thanks.")));
         var reply = (await svc.SendAsync(null, "hello")).NewMessages[1];
-        Assert.Equal("Please confirm.  Thanks.", reply.Text);
+        Assert.Equal("Here you go.  Thanks.", reply.Text);
+    }
+
+    [Fact]
+    public async Task Saying_please_confirm_without_a_card_is_flagged_but_a_real_card_is_not()
+    {
+        await using var c = await ChatTestEnv.CreateAsync();
+        var svc = NewService(c, new ScriptedClient((_, _) => ScriptedClient.Say("Order 43 is being cancelled. Please confirm this change.")));
+        var reply = (await svc.SendAsync(null, "cancel order 43")).NewMessages[1];
+        Assert.EndsWith(ChatService.NoCardNote, reply.Text);
+
+        await using var d = await ChatTestEnv.CreateAsync();
+        var real = NewService(d, new ScriptedClient(ScriptedClient.Sensible));
+        Assert.DoesNotContain(ChatService.NoCardNote, (await real.SendAsync(null, "order 42 is dispatched")).NewMessages[1].Text);
     }
 
     [Fact]
