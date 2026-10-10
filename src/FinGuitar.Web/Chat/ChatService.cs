@@ -82,8 +82,11 @@ public class ChatService(
 
     private async Task<(string Text, bool IsError)> AskModelAsync(int conversationId)
     {
-        var history = await BuildHistoryAsync(conversationId);
-        var messages = new List<AiMessage> { new(ChatRole.System, ChatPrompt.Build(store.Now, user.Role)) };
+        var (history, shown) = await BuildHistoryAsync(conversationId);
+        var system = ChatPrompt.Build(store.Now, user.Role);
+        if (shown.Count > 0)
+            system += "\nWhat the user has already been shown (newest last; these are notes for you, never write them): " + string.Join(" ", shown.TakeLast(5));
+        var messages = new List<AiMessage> { new(ChatRole.System, system) };
         messages.AddRange(history);
 
         var chatOptions = new Microsoft.Extensions.AI.ChatOptions
@@ -98,6 +101,8 @@ public class ChatService(
         {
             var response = await client.GetResponseAsync(messages, chatOptions, cts.Token);
 
+            logger.LogDebug("Model reply: {Text} (messages: {Count}, tool rounds: {Rounds})", response.Text, response.Messages.Count,
+                response.Messages.Count(m => m.Contents.OfType<FunctionCallContent>().Any()));
             var rounds = response.Messages.Count(m => m.Contents.OfType<FunctionCallContent>().Any());
             var text = ThinkStripper.StripShownNotes(ThinkStripper.Strip(response.Text));
             if (rounds >= MaxToolRounds) return (RoundLimit, true); // D22: the limit was reached without a real answer
@@ -122,10 +127,16 @@ public class ChatService(
         }
     }
 
-    /// <summary>The last 20 messages. Error messages are left out so an outage does not teach the model to refuse (2.6.3).</summary>
-    private async Task<List<AiMessage>> BuildHistoryAsync(int conversationId)
+    /// <summary>
+    /// The last 20 messages. Error messages are left out so an outage does not teach the model to refuse (2.6.3).
+    /// What was drawn under assistant messages (tables, cards) is returned as short notes for the system prompt instead of
+    /// being added to the assistant's own lines: a small model copies such lines, or earlier wording like "I have proposed ...
+    /// Please confirm", instead of calling the tool again. Card turns are left out of the assistant lines for the same reason.
+    /// </summary>
+    private async Task<(List<AiMessage> Messages, List<string> Shown)> BuildHistoryAsync(int conversationId)
     {
         var list = new List<AiMessage>();
+        var shown = new List<string>();
         foreach (var m in await store.GetRecentMessagesAsync(conversationId, HistoryMessages))
         {
             if (m.IsError) continue;
@@ -134,13 +145,11 @@ public class ChatService(
                 list.Add(new AiMessage(ChatRole.User, m.Text));
                 continue;
             }
-            var summary = ChatPayloadJson.Summarise(m.PayloadKind, m.PayloadJson);
-            // A small model copies earlier wording such as "I have proposed ... Please confirm" instead of calling the
-            // tool again, so a card turn goes into history as the note alone, never as that sentence.
+            if (ChatPayloadJson.Summarise(m.PayloadKind, m.PayloadJson) is { } note) shown.Add(note);
             var isCard = m.PayloadKind is PayloadKinds.ProposalCard or PayloadKinds.FinalConfirmCard;
-            list.Add(new AiMessage(ChatRole.Assistant, summary is null ? m.Text : isCard ? summary : $"{m.Text}\n{summary}"));
+            if (!isCard) list.Add(new AiMessage(ChatRole.Assistant, m.Text));
         }
-        return list;
+        return (list, shown);
     }
 
     public const string NoCardNote = "No confirmation card was created, so nothing has been proposed or changed. Please rephrase your request.";

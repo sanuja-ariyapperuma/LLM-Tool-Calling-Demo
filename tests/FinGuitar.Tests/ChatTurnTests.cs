@@ -138,7 +138,8 @@ public class ChatTurnTests
         Assert.Contains("Level1", last.Messages[0].Text);
         Assert.Contains("yyyy-MM-dd", last.Messages[0].Text);
         Assert.Contains(last.Messages, m => m.Role == ChatRole.User && m.Text == "pending orders");
-        Assert.Contains(last.Messages, m => m.Role == ChatRole.Assistant && m.Text.Contains("[Shown: orders"));
+        Assert.Contains("[Shown: orders", last.Messages[0].Text); // the note is in the system prompt, not in an assistant line
+        Assert.DoesNotContain(last.Messages.Skip(1), m => m.Text.Contains("[Shown:"));
         Assert.Equal(0.1f, last.Options!.Temperature);
         Assert.Equal(false, last.Options.AdditionalProperties!["think"]);
         Assert.Equal(9, last.Options.Tools!.Count);
@@ -272,8 +273,8 @@ public class ChatTurnTests
         await svc.SendAsync(first.Conversation.Id, "cancel order 43");
 
         var assistant = client.Seen[^1].Messages.Where(m => m.Role == ChatRole.Assistant).Select(m => m.Text).ToList();
-        Assert.Contains(assistant, t => t.StartsWith("[Shown: confirmation card:"));
-        Assert.DoesNotContain(assistant, t => t.Contains("I have proposed"));
+        Assert.Contains("[Shown: confirmation card:", client.Seen[^1].Messages[0].Text);
+        Assert.DoesNotContain(assistant, t => t.Contains("I have proposed") || t.Contains("[Shown:"));
     }
 
     [Fact]
