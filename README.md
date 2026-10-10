@@ -159,9 +159,26 @@ Each tool is a thin adapter over a method the admin pages already use:
 
 **What changed in existing files** (from `git diff --stat before-chat -- src/` for files that existed before the chat):
 
-@@SEAM@@
+| Existing file | Lines added | What changed |
+|---|---|---|
+| `src/FinGuitar.Web/Program.cs` | +19 | Register the model client (with tool calling), the chat services, and the Ollama options |
+| `src/FinGuitar.Web/FinGuitar.Web.csproj` | +2 | Two package references: `Microsoft.Extensions.AI`, `OllamaSharp` |
+| `src/FinGuitar.Web/appsettings.json` | +5 | The `Ollama` section |
+| `src/FinGuitar.Web/Pages/Shared/_AdminLayout.cshtml` | +1 | The "Chat" menu item |
+| `src/FinGuitar.Web/Pages/Admin/Audit/Index.cshtml` | +29 / -2 | Chat badge, quoted request, owner-only "View in chat" link, "Confirmed twice" |
+| `docker-compose.yml` (outside `src/`) | +3 | The three `Ollama__*` settings for the `web` service |
 
-**What was added** (new files): @@NEW@@
+That is five files under `src/`, 56 added lines, and no service, domain, or existing migration file.
+
+**What was added** (new files): 29 files and about 1,700 lines under `src/`, plus 7 test files:
+
+| New | Files |
+|---|---|
+| `Chat/` | `ChatService`, `ChatTools`, `ChatToolCatalog`, `ChatPrompt`, `ThinkStripper`, `ChatPayloads`, `ProposedActionService`, `CriticalActionPolicy`, `ChatStore`, `ChatModels`, `ToolResultLog`, `OllamaOptions` (12) |
+| Migration | `Data/Migrations/0002_chat.sql` (the three chat tables) |
+| Page | `Pages/Admin/Chat/Index` (2) |
+| Partials | `Pages/Shared/Chat/*` (13) |
+| Script | `wwwroot/js/chat.js` |
 
 No service, domain, or existing migration file changed. The audit trail was designed from the start to know where a change came from, so the chat only *uses* `ChangeContext.MarkAsChat`.
 
@@ -317,7 +334,31 @@ intent.md, spec.md, plan.md   What was asked for, the design, and the build plan
 
 ## Acceptance results
 
-@@ACCEPT@@
+The run was done on 2026-10-10 against the live model `qwen3.5:4b`, on a freshly seeded database, with the app started locally (`dotnet run`) and Ollama running on the same machine. **It was not run through `docker compose`**: this machine had less than 3 GB of free disk, and Docker could not unpack the large Ollama image. What Docker coverage exists is listed in the notes for scenarios 12 and 13. The scripted run (a headless browser typing into the real chat page) is described in the notes for each row. Chat-answer wording varies from run to run, so the check for each row is what the page and database show, not the exact sentence.
+
+| # | Scenario | Result | Notes |
+|---|---|---|---|
+| 1 | Pending orders table | Pass | Table of pending orders (including 42, 43, 44) drawn by the server |
+| 2 | Today's orders | Pass | Today's orders listed |
+| 3 | Find John's Les Paul order | Pass | Order 30 found from a description, no id given |
+| 4 | Dispatch order 42 with confirmation | Pass | Card, then Confirm; the order page shows Dispatched |
+| 5 | Delivered to Pending refused | Pass | Refused with the rule message, no card created |
+| 6 | Level2: reads OK, writes refused, confirm refused | Pass | Level2 reads worked, no card for a change, and a direct confirm of the Level1 card gave HTTP 404 |
+| 7 | Low stock, then set stock of product 7 | Pass | Low-stock table shown; stock 4 to 12 applied after Confirm |
+| 8 | Revenue this week matches the dashboard | Pass | Both showed $20,092.00 |
+| 9 | Reload shows the conversation and tables | Pass | Messages, tables and card states all came back |
+| 10 | Ollama stopped gives a clear error | Pass | With Ollama unreachable: "The assistant is not available right now. Check that Ollama is running." The shop kept working |
+| 11 | README is enough to understand and run | Not independently checked | Written and reviewed by its author; nobody new has followed it from a clean clone yet |
+| 12 | Docker-only machine: fresh clone, `docker compose up --build` | **Not verified** | Before the chat was added, the app image built, `docker build --target test` passed, and the container served pages, the built CSS and product photos. The final image with the chat was not rebuilt or re-tested in Docker. (The tests pass with `dotnet test`: 172 of 172.) The full compose stack (with the Ollama image) could not be started because of the disk-space limit above |
+| 13 | Data survives `down` and `up`; `down -v` resets | Partly verified | Verified with a process restart on the same database and key folder: still signed in, chat history and data intact. The Docker volume behaviour itself was not exercised |
+| 14 | Look and feel, phone and keyboard, contrast | Pass, with a caveat | Storefront white and admin dark checked on screenshots; no sideways scrolling at 375 px on the pages checked; a 2 px amber focus ring on the first Tab stop. Contrast values are documented in [ui-styles.md](docs/ui-styles.md) and were calculated, not machine-audited |
+| 15 | Five wrong passwords lock the account for 5 minutes | Pass | "Too many attempts" after 5 failures; the right password worked again after the 5 minutes (also covered by a fake-clock test) |
+| 16 | Audit page: Chat badge, quote, owner-only link, filter | Pass | Chat and Admin panel entries shown; the owner sees "View in chat"; Level2 sees the quote and no link; the Chat filter hides the product edit |
+| 17 | Cancel 43 needs two confirms; Keep on 44 changes nothing | Pass | Final card warned it cannot be undone; 43 became Cancelled and the audit says "Confirmed twice"; 44 stayed Pending with no audit entry |
+| 18 | +25% price needs two confirms, +5% needs one | Pass | Product 3: +25% gave the critical card and a second card; +5% applied after one Confirm |
+| 19 | The chat changed only the seam files | Pass | See the table in "What it took to add the chat" |
+
+Screenshots from the run are in [`docs/images/`](docs/images/).
 
 ## Limitations and non-goals
 
@@ -325,7 +366,12 @@ Not in this sample: checkout and payments, customer accounts, shipping, text-to-
 
 Known weaknesses of a small model (`qwen3.5:4b`):
 
-@@WEAK@@
+- **It sometimes says "please confirm" without calling the change tool.** Then no card exists. The server notices this and adds "No confirmation card was created, so nothing has been proposed or changed. Please rephrase your request." Nothing is ever changed without a card.
+- **It copies earlier wording.** It once repeated the history notes or an earlier "I have proposed…" sentence instead of calling the tool again. The server now keeps such notes out of the assistant's own lines, removes `[Shown: …]` text from replies, and flags a false confirmation as above.
+- **It sometimes returns nothing at all** for a request. The reply then says "Please review the change below and confirm it." if a card exists, or "I'm not sure how to help with that." Asking again usually works. This happened more often late in a long conversation; **New chat** helps.
+- **It repeats table rows in its sentence** even though it is told not to. The table drawn by the server is always the real data.
+- **Dates:** "last week" can be read as a rolling 7 days. The prompt now spells out this week, last week and yesterday as exact dates.
+- **Speed:** on this machine an answer took about 15 to 45 seconds, and the first one after a start up to two minutes while the model loaded.
 
 ## Credits
 

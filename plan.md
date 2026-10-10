@@ -231,3 +231,15 @@ If a scenario fails because of model behaviour (wrong tool, bad arguments), firs
 - **Spike outcome** can change the model (task 1.2 gate). Nothing model-specific is built before it.
 - **Photo sourcing** needs web access and licence checks; it is the one task that cannot be completed offline. Start it early in parallel with 2.1–2.2.
 - **Seam honesty**: if any chat task wants to touch a service, domain, or existing migration file, stop. Either the change belongs in the admin app in a form a page can use (make it, list it in the README as a seam change, and update spec 2.4.2), or the chat handles it inside `Chat/`.
+
+---
+
+## Status (2026-10-10)
+
+All tasks in phases 1 to 7 are done except the parts that need a working Docker with enough disk:
+
+- **Done:** spike (gate passed), skeleton, data, seed and photos, admin app, storefront, `before-chat` tag, chat core, chat turn and UI, docs (README, architecture, data access, UI styles, feature pages 01 to 08), acceptance run of scenarios 1 to 10 and 14 to 19 against the live model, and 172 passing tests.
+- **Not done:** `docker compose up --build` with the Ollama image, the Docker part of scenarios 12 and 13, and the fresh-clone Docker smoke test (plan 7.5). Docker on this machine could not unpack the Ollama image because the disk had under 3 GB free. The acceptance run used the app started with `dotnet run` and the local Ollama instead. The README says so.
+- **Not done:** scenario 11 (someone new follows the README from a clean clone).
+- **Changes found while building** (also in the README and feature pages): a Dapper type-map fix for dates, a server note when the model says "please confirm" without a card, keeping history notes out of assistant lines, and per-user isolation of browser sessions in the scripted run.
+- Product photo licences were taken from the Wikimedia Commons metadata (licence name, author, URL) and recorded in `CREDITS.md`; no human has reviewed each one yet.
