@@ -1,6 +1,109 @@
 # Architecture
 
-(Component, Docker, ER, and chat-turn diagrams are added as the phases that introduce them land.)
+FinGuitar is one ASP.NET Core Razor Pages project plus one test project. The admin web app was built first, as an ordinary application with no chat code. The chat was then added as a layer that calls the same application services the admin pages call.
+
+## Components
+
+```mermaid
+flowchart LR
+    Visitor([Shop visitor]) --> Store[Storefront pages]
+    Admin([Admin user]) --> AdminPages[Admin pages]
+    Admin --> ChatPage[Chat page]
+    ChatPage --> ChatService
+    ChatService --> LLM[Ollama<br/>qwen3.5:4b]
+    ChatService --> Tools[Chat tools]
+    Tools --> Services[Application services<br/>Order, Product, Customer, Sales]
+    AdminPages --> Services
+    Store --> Services
+    ChatPage -- Confirm / Cancel --> Actions[Proposed action service]
+    Actions --> Services
+    Services --> DB[(SQLite)]
+    ChatService --> DB
+```
+
+The chat never talks to the shop tables directly. Every read and write goes through the same application services as the admin pages. Pages are thin: they read input, call a service, and show the result. Services own the rules, the SQL, the role checks, and the audit trail.
+
+### Layers
+
+| Folder | Job |
+|---|---|
+| `Domain/` | Plain classes and rules: `Order.ChangeStatus`, `OrderStatusRules`, `ProductRules`, exceptions |
+| `Data/` | `Db` (opens connections), `DbMigrator`, `Migrations/*.sql`, `SeedData`, Dapper setup |
+| `Services/` | `OrderService`, `ProductService`, `CustomerService`, `SalesService`, `AuditService`, `AuthService`, `CartService`, `CurrentUser`, `ChangeContext` |
+| `Pages/` | Razor Pages: storefront, account, admin |
+| `Chat/` | Everything the chat adds (see the chat pages) |
+
+## A change and its audit entry
+
+```mermaid
+sequenceDiagram
+    participant Caller as Admin page or chat confirm
+    participant Svc as OrderService / ProductService
+    participant Audit as AuditService
+    participant DB as SQLite
+
+    Caller->>Svc: ChangeStatusAsync(42, Dispatched)
+    Svc->>Svc: RequireLevel1
+    Svc->>DB: BEGIN
+    Svc->>DB: read order 42 (old status)
+    Svc->>Svc: domain rule check
+    Svc->>DB: UPDATE orders
+    Svc->>Audit: RecordAsync(Order 42, Pending to Dispatched)
+    Audit->>DB: INSERT audit_entries (who, source, old and new)
+    Svc->>DB: COMMIT
+    Note over Svc,DB: If anything fails: ROLLBACK,<br/>no change and no audit entry
+```
+
+The role check comes first, then the change and the audit entry commit together or not at all. The source (Admin panel or Chat) comes from `ChangeContext`, so the method signatures do not change for the chat.
+
+## Docker
+
+```mermaid
+flowchart LR
+    Browser([Browser<br/>localhost:8080]) --> Web
+    subgraph compose [docker compose]
+        Web[web<br/>ASP.NET Core app] -- http://ollama:11434 --> Ollama[ollama<br/>LLM server]
+        Pull[ollama-pull<br/>runs once] -- pulls qwen3.5:4b --> Ollama
+    end
+    Web --- AppData[(app-data volume<br/>SQLite db + keys)]
+    Ollama --- Models[(ollama-models volume<br/>downloaded model)]
+```
+
+| Service | Job |
+|---|---|
+| `ollama` | Serves the model. Pinned image `ollama/ollama:0.40.2`. Health check: `ollama list`. Its port is not published to the host. |
+| `ollama-pull` | Runs `ollama pull qwen3.5:4b` once, then exits. |
+| `web` | The app on port 8080. It waits only for `ollama` to be healthy, not for the download, so the shop and admin panel work at once. |
+
+```mermaid
+sequenceDiagram
+    actor Dev as Person who cloned the repo
+    participant DC as docker compose
+    participant O as ollama
+    participant P as ollama-pull
+    participant W as web
+    participant DB as SQLite (volume)
+
+    Dev->>DC: docker compose up --build
+    DC->>W: build image
+    DC->>O: start, wait until healthy
+    par model download
+        DC->>P: start
+        P->>O: pull qwen3.5:4b (about 3 GB, first run only)
+        P-->>DC: exit 0
+    and app start
+        DC->>W: start
+        W->>DB: apply migrations
+        W->>DB: database empty, so seed products, customers, orders, demo users
+        W-->>Dev: ready at http://localhost:8080
+    end
+```
+
+The model and the database live in named volumes, so later starts download and seed nothing. `docker compose down -v` removes both.
+
+## Data model
+
+See the ER diagram in [data-access.md](data-access.md).
 
 ## Spike findings (plan task 1.2, run 2026-10-10)
 
