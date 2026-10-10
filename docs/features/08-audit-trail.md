@@ -15,7 +15,13 @@ Level1 and Level2 can both read the audit page. Nobody can edit or delete an ent
 3. Press an entry's summary to see the old and new value of each field.
 4. On an order or product page, the **History** section shows the latest entries and links to the audit page already filtered to that order or product.
 
-Changes made from the chat are marked as such, with the request the admin typed, and the admin who made the change also gets a link back to that conversation. (This is described with the chat pages.)
+### Changes made from the chat
+
+A change that came from the chat shows a **Chat** badge (with a speech-bubble icon) and the original request quoted underneath, for example "order 42 is dispatched". Changes made on the admin pages show a neutral **Admin panel** badge. The source is always shown as text and an icon, never by colour alone.
+
+- The admin who made the change also sees a **View in chat** link that opens the conversation at their request. Other admins see the quote but no link, because conversations are private.
+- Changes that needed two confirmations (cancelling an order, a price change of 20% or more, stock set to 0) also show a **Confirmed twice** marker.
+- Filtering the source by "Chat" shows only chat changes.
 
 ## How it works
 

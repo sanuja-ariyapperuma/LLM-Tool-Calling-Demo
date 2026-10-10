@@ -56,6 +56,71 @@ sequenceDiagram
 
 The role check comes first, then the change and the audit entry commit together or not at all. The source (Admin panel or Chat) comes from `ChangeContext`, so the method signatures do not change for the chat.
 
+## A chat turn
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant Page as Chat page (chat.js)
+    participant Chat as ChatService
+    participant DB as SQLite
+    participant LLM as Ollama model
+    participant Tools as Chat tools
+    participant Svc as Application services
+
+    Admin->>Page: types "what are the pending orders?"
+    Page->>Chat: POST Send (text, conversationId)
+    Chat->>Chat: validate (1 to 1,000 characters)
+    Chat->>DB: one transaction: create conversation if needed,<br/>expire this conversation's open cards, save user message
+    Chat->>LLM: system prompt + last 20 messages<br/>+ tools allowed for this role
+    loop up to 5 tool rounds
+        LLM->>Tools: search_orders(status = Pending)
+        Tools->>Svc: OrderService.SearchAsync
+        Svc->>DB: query
+        Tools-->>LLM: compact JSON result
+        Tools->>Tools: record the full result for the page
+    end
+    LLM-->>Chat: one or two sentences
+    Chat->>Chat: strip think text, choose the payload
+    Chat->>DB: save assistant message (text + table or card)
+    Chat-->>Page: HTML for both messages
+    Page-->>Admin: sentence + table drawn by the server
+```
+
+The two halves of a turn are separate transactions because the model call sits between them. If the model fails, an error message is saved instead of a reply.
+
+## How the chat is plugged in (the seam)
+
+The chat is a layer on top of an app that was complete without it. It adds new files under `Chat/`, a migration for its own tables, a page, partials and a script. It changes only a handful of existing files:
+
+| Existing file | Change |
+|---|---|
+| `Program.cs` | Register the model client, the chat services and the Ollama options |
+| `FinGuitar.Web.csproj` | Add `Microsoft.Extensions.AI` and `OllamaSharp` |
+| `appsettings.json` | Add the `Ollama` section |
+| `Pages/Shared/_AdminLayout.cshtml` | Add the "Chat" menu item |
+| `Pages/Admin/Audit/Index.cshtml` | Show the Chat badge, quote, owner-only link and "Confirmed twice" |
+
+Everything else the chat needs it gets by calling the same service methods the admin pages call. The only hook is `ChangeContext.MarkAsChat`, which was part of the audit design from the start.
+
+```mermaid
+flowchart TB
+    subgraph existing [Existing admin web app: built first, services unchanged by chat]
+        Pages[Admin pages] --> Svc[Application services<br/>Order, Product, Customer, Sales, Audit]
+        Svc --> Domain[Domain rules + validation]
+        Svc --> DB[(SQLite)]
+    end
+    subgraph chat [Chat add-on: new code only]
+        ChatPage[Chat page] --> ChatSvc[ChatService + LLM]
+        ChatSvc --> Tools[Chat tools<br/>thin adapters]
+        ChatPage --> PA[ProposedActionService]
+    end
+    Tools -- same public methods --> Svc
+    PA -- same public methods --> Svc
+    PA -. MarkAsChat .-> Ctx[ChangeContext<br/>the one hook]
+    Ctx -.-> Svc
+```
+
 ## Docker
 
 ```mermaid

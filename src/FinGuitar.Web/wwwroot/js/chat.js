@@ -28,6 +28,26 @@
     });
   }
 
+  // A new conversation appears in the list at once (the server list is read on the next page load).
+  function addToSidebar(id, firstMessage) {
+    var list = document.querySelector('aside[aria-label="Conversations"] ul');
+    if (!list) return;
+    list.querySelectorAll('[aria-current]').forEach(function (a) {
+      a.removeAttribute('aria-current');
+      a.className = 'block truncate rounded-md px-3 py-2 hover:bg-backstage-raised';
+    });
+    var empty = Array.from(list.children).find(function (li) { return !li.querySelector('a'); });
+    if (empty) empty.remove();
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.href = '/Admin/Chat?c=' + id;
+    a.setAttribute('aria-current', 'page');
+    a.className = 'block truncate rounded-md px-3 py-2 bg-backstage-raised font-semibold text-sunburst';
+    a.textContent = firstMessage.length > 60 ? firstMessage.slice(0, 60) : firstMessage;
+    li.appendChild(a);
+    list.insertBefore(li, list.firstChild);
+  }
+
   function post(url, body) {
     return fetch(url, {
       method: 'POST',
@@ -108,6 +128,7 @@
       if (id && id !== conversationId) {
         conversationId = id;
         history.replaceState(null, '', '?c=' + id);
+        addToSidebar(id, value);
       }
       text.value = '';
       append(r.body);
