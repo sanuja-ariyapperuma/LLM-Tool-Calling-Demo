@@ -95,7 +95,7 @@ These close points the intent left open.
 - **FR-C10**: A proposed action can be confirmed only by the user who created it, only once, only while pending and not expired (D2), and only if that user still holds Level1.
 - **FR-C11**: Every message is saved with its role, text, structured payload (JSON), and timestamp. Reopening a conversation shows its tables and cards again. Cards show their current status (pending, awaiting final confirmation, applying, confirmed, cancelled, expired, or failed). A card left in `Applying` shows "Outcome unknown. Check the audit page." (2.6.5).
 - **FR-C12**: Tool errors, invalid arguments, unknown ids, and domain rule violations go back to the model as a result such as `{ "error": "Order 999 not found" }`, and the model explains it. Tools do not throw for these cases.
-- **FR-C13**: If Ollama cannot be reached or times out, the chat shows "The assistant is not available right now. Check that Ollama is running." If Ollama is running but the model is not downloaded yet, the chat shows "The assistant is still downloading its model. Try again in a few minutes." (D21). The error is saved in the conversation, and the app keeps working.
+- **FR-C13**: If the model service cannot be reached, rejects the request (for example a bad API key), or times out, the chat shows "The assistant is not available right now. Check that the language model service is running and configured." If Ollama is running but the model is not downloaded yet, the chat shows "The assistant is still downloading its model. Try again in a few minutes." (D21). The error is saved in the conversation, and the app keeps working.
 - **FR-C14**: A chat message is limited to 1,000 characters. Empty messages are rejected.
 - **FR-C15**: A proposed action is **critical** (D16) when it is any of these. The server decides this when it creates the proposal, and the rules live in one place.
   - an order status change to `Cancelled`
@@ -109,10 +109,10 @@ These close points the intent left open.
 ## 1.3 Non-functional requirements
 
 - **NFR-1**: .NET 10 Razor Pages, a single web project plus one test project.
-- **NFR-2**: Runs fully locally with SQLite (Dapper, SQL migration scripts, and seed data) and Ollama. Nothing calls a cloud service at run time. The Ollama URL, model name, and timeout are set in `appsettings.json` and can be overridden with environment variables (`Ollama__Endpoint`, `Ollama__Model`, `Ollama__TimeoutSeconds`).
+- **NFR-2**: Runs fully locally with SQLite (Dapper, SQL migration scripts, and seed data) and Ollama. Nothing calls a cloud service at run time. The model provider (`Ollama` by default, or any OpenAI-compatible API), endpoint, model name, API key, and timeout are set in the `Llm` section of `appsettings.json` and can be overridden with environment variables (`Llm__Provider`, `Llm__Endpoint`, `Llm__Model`, `Llm__ApiKey`, `Llm__TimeoutSeconds`). Nothing calls a cloud service unless the person chooses a hosted provider.
 - **NFR-3**: Page models stay thin; application services own the logic. Use dependency injection, async I/O, and validation at the boundaries (forms, tool arguments, and chat endpoints). No speculative abstractions.
 - **NFR-4**: Anti-forgery protection on every POST, including the chat AJAX calls (the token is sent in the `RequestVerificationToken` header).
-- **NFR-5**: One model call, including all tool rounds, has a timeout (`Ollama:TimeoutSeconds`: 120 by default, 180 in Docker) and at most 5 tool rounds (D22).
+- **NFR-5**: One model call, including all tool rounds, has a timeout (`Llm:TimeoutSeconds`: 120 by default, 180 in Docker) and at most 5 tool rounds (D22).
 - **NFR-6**: There is no text-to-SQL. The model reaches data only through the typed tools. All SQL is written by developers and uses parameters. User or model input is never concatenated into SQL.
 - **NFR-7**: Anyone who clones the repository can run the whole application with Docker alone: no .NET SDK, Ollama, or database install. `docker compose up --build` from the repository root is the only command needed (D9).
 - **NFR-8**: Data survives container restarts. The SQLite database, Ollama models, and ASP.NET Core data-protection keys are kept in named Docker volumes. `docker compose down -v` resets everything, and the next start seeds a fresh database.
@@ -221,6 +221,7 @@ The chat never talks to the database directly. Every read and write goes through
 | `Microsoft.Data.Sqlite` | SQLite ADO.NET driver |
 | `Microsoft.Extensions.AI` | `IChatClient`, `ChatClientBuilder`, `UseFunctionInvocation`, `AIFunctionFactory` |
 | `OllamaSharp` | `OllamaApiClient` implements `IChatClient` |
+| `Microsoft.Extensions.AI.OpenAI` | Adapts an OpenAI-compatible API to `IChatClient` (the `OpenAI` provider) |
 | `xunit`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk` | Tests |
 | `Microsoft.Extensions.TimeProvider.Testing`, `Microsoft.AspNetCore.Mvc.Testing` | Test project only: `FakeTimeProvider` and page-level tests. The web project gets no extra packages. |
 | `tailwindcss`, `@tailwindcss/cli` (npm, exact pinned v4 version) | Builds `wwwroot/css/app.css`. Used at build time only, never shipped to the browser as a script. |
@@ -392,9 +393,9 @@ sequenceDiagram
 
 | Change | Why |
 |---|---|
-| `Program.cs`: register the chat client, the chat services, and the `Ollama` options | Wire up the new feature |
-| `FinGuitar.Web.csproj`: add the `Microsoft.Extensions.AI` and `OllamaSharp` package references | The chat's only new dependencies |
-| `appsettings.json`: add the `Ollama` section (`Endpoint`, `Model`, `TimeoutSeconds`) | Chat configuration |
+| `Program.cs`: register the chat client, the chat services, and the `Llm` options | Wire up the new feature |
+| `FinGuitar.Web.csproj`: add the `Microsoft.Extensions.AI`, `Microsoft.Extensions.AI.OpenAI` and `OllamaSharp` package references | The chat's only new dependencies |
+| `appsettings.json`: add the `Llm` section (`Provider`, `Endpoint`, `Model`, `ApiKey`, `TimeoutSeconds`) | Chat configuration |
 | `_AdminLayout`: add a "Chat" nav item | Reach the page |
 | Audit page: show the Chat badge, the quote, the owner-only "View in chat" link, and "Confirmed twice" when the chat columns are set | FR-AU5 |
 
@@ -482,7 +483,7 @@ services.AddChatClient(sp => new OllamaApiClient(new Uri(opts.Endpoint), opts.Mo
         .UseFunctionInvocation(configure: f => { f.MaximumIterationsPerRequest = 5; });
 ```
 
-- `appsettings.json`: `"Ollama": { "Endpoint": "http://localhost:11434", "Model": "qwen3.5:4b", "TimeoutSeconds": 120 }`.
+- `appsettings.json`: `"Llm": { "Provider": "Ollama", "Endpoint": "http://localhost:11434", "Model": "qwen3.5:4b", "TimeoutSeconds": 120 }`. With `"Provider": "OpenAI"` the app builds an OpenAI-compatible client from `Endpoint`, `Model` and `ApiKey` instead (an unknown provider, or `OpenAI` without a key, fails with a clear message)..
 - `think = false` is passed per request (D4). **The spike confirms how**: either `ChatOptions.AdditionalProperties["think"]` or OllamaSharp's request options. `ThinkStripper` strips any `<think>…</think>` block that still appears, as the fallback.
 - Temperature is 0.1, for more predictable tool selection.
 
@@ -555,7 +556,7 @@ sequenceDiagram
 
 - **Payload rule.** If the turn created a proposal, the payload is that proposal card. Otherwise it is the result of the **last successful** data tool call in the turn. If there was none, the message has no payload. This covers "search, then get details" by showing the details.
 - **History sent to the model.** User messages are sent as they are. Assistant messages are sent as their text plus a one-line payload summary, for example `[Shown: orders 12, 15, 19]`, so that "the second one" can be resolved. ActionResult messages are sent as assistant text. Messages with `IsError = true` are **not** sent, so a past outage does not teach the model to refuse. Tool call messages from earlier turns are not re-sent, which keeps the context small for a 4B model.
-- **Errors (FR-C13).** `HttpRequestException`, a timeout, or `OperationCanceledException` from the model client is saved as an Assistant message with `IsError = true` and the friendly text. A "model not found" response from Ollama gives the "still downloading" text (D21). Any other exception is logged and shown as a generic "Something went wrong." message. The page never crashes.
+- **Errors (FR-C13).** `HttpRequestException`, a timeout, or `OperationCanceledException` from the model client is saved as an Assistant message with `IsError = true` and the friendly text. A "model not found" response from Ollama gives the "still downloading" text (D21). An HTTP failure from the OpenAI-compatible client (`ClientResultException`, such as a bad key) is treated like an unreachable service. Any other exception is logged and shown as a generic "Something went wrong." message. The page never crashes.
 - **Round limit (D22).** If the function-invocation client stops at 5 rounds and the last response still holds tool calls or no text, the reply is the D22 message with `IsError = true`, and the payload rule still applies.
 - **Conversation title.** A new conversation is titled with the first user message, cut to 60 characters.
 - One send is processed at a time per page. The send button is disabled until the reply arrives.
@@ -797,9 +798,10 @@ Multi-stage, using official images:
 | Variable | Value |
 |---|---|
 | `ConnectionStrings__Default` | `Data Source=/app/data/finguitar.db` |
-| `Ollama__Endpoint` | `http://ollama:11434` |
-| `Ollama__Model` | `qwen3.5:4b` |
-| `Ollama__TimeoutSeconds` | `180` (CPU-only machines are slower) |
+| `Llm__Provider` | `Ollama` |
+| `Llm__Endpoint` | `http://ollama:11434` |
+| `Llm__Model` | `qwen3.5:4b` |
+| `Llm__TimeoutSeconds` | `180` (CPU-only machines are slower) |
 | `TZ` | Defaults to `UTC`; the README explains how to set it to your time zone (D8) |
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
 

@@ -87,7 +87,7 @@ flowchart TD
 
 ## When things go wrong
 
-- **Ollama not reachable or too slow:** "The assistant is not available right now. Check that Ollama is running."
+- **The model service is not reachable or too slow:** "The assistant is not available right now. Check that the language model service is running and configured."
 - **Model still downloading:** "The assistant is still downloading its model. Try again in a few minutes."
 - **Too many tool rounds:** "I couldn't finish that. Try asking more specifically."
 - **Anything else:** "Something went wrong. Please try again."

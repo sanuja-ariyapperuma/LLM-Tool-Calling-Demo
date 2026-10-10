@@ -95,9 +95,9 @@ The chat is a layer on top of an app that was complete without it. It adds new f
 
 | Existing file | Change |
 |---|---|
-| `Program.cs` | Register the model client, the chat services and the Ollama options |
-| `FinGuitar.Web.csproj` | Add `Microsoft.Extensions.AI` and `OllamaSharp` |
-| `appsettings.json` | Add the `Ollama` section |
+| `Program.cs` | Register the model client (Ollama or an OpenAI-compatible API, chosen by `Llm:Provider`), the chat services and the `Llm` options |
+| `FinGuitar.Web.csproj` | Add `Microsoft.Extensions.AI`, `Microsoft.Extensions.AI.OpenAI` and `OllamaSharp` |
+| `appsettings.json` | Add the `Llm` section |
 | `Pages/Shared/_AdminLayout.cshtml` | Add the "Chat" menu item |
 | `Pages/Admin/Audit/Index.cshtml` | Show the Chat badge, quote, owner-only link and "Confirmed twice" |
 

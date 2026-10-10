@@ -41,8 +41,8 @@ Every change, whether it comes from the chat or the admin pages, appears on an *
 | Admin auth | ASP.NET Core **cookie authentication**. Users are kept in an `admin_users` table and passwords are hashed with the built-in `PasswordHasher<T>`. There are two roles, `Level1` and `Level2`, and two seeded demo users. An account locks for 5 minutes after 5 failed sign-ins; the lockout message reveals that the account exists, which is accepted for a local demo. (This replaces ASP.NET Core Identity, whose standard storage needs EF Core. It was chosen as the easiest option to build and understand.) |
 | Frontend | **Tailwind CSS** with a custom theme. The storefront ("Showroom") has a **white** background, and the admin panel ("Backstage"), including the chat and sign-in, has a **dark** background. Buttons are solid colours; the sunburst gradient is decoration only, with no text on it, so contrast meets WCAG AA. The CSS is built at build time and no CDN is used. |
 | Running it | **Docker.** After `git clone`, `docker compose up --build` starts the web app and Ollama, downloads the model, creates the database, and loads the seed data. The only thing needed is Docker. The shop and admin panel start without waiting for the model download; until it finishes, the chat says the model is still downloading. `dotnet run` still works for developers. |
-| LLM | `qwen3.5:4b` on local Ollama |
-| LLM client | `Microsoft.Extensions.AI` (`IChatClient` with function invocation) and `OllamaSharp` |
+| LLM | `qwen3.5:4b` on local Ollama by default; the provider, endpoint, model and key are settings, so any Ollama server or OpenAI-compatible service can be used |
+| LLM client | `Microsoft.Extensions.AI` (`IChatClient` with function invocation), `OllamaSharp`, and the OpenAI adapter |
 | Chat as an add-on | The chat **reuses the admin portal's service methods** instead of having its own. Each tool is a thin adapter around a method an admin page already uses, so the rules, validation, and error messages are the same. New service methods are allowed only if a page can use them too. No chat-specific parameters are added to shared methods. The admin app's audit trail is designed from the start to record where a change came from (admin panel by default, with optional chat fields, and a hook to mark a change as coming from the chat). The only changes to the existing app are a small, listed "seam": registering the chat, a nav link, and showing chat details (badge, quoted request, link) on the audit page. No service, domain rule, or existing table changes. |
 | Tool style | A fixed set of typed tools that call the same application services as the admin UI. **No text-to-SQL.** |
 | Writes from chat | **Confirm first.** A write tool never changes data. It records a *proposed action*, and the chat shows a Confirm/Cancel card. Data changes only when the user clicks Confirm; typing "yes" does not confirm. **One change per turn**: a second proposal in the same turn is refused. |
@@ -149,7 +149,7 @@ Every tool, and the confirm step, calls a method the admin pages already use: th
   - no speculative abstractions
 - Runs fully locally: SQLite and Ollama, with no cloud calls at run time
 - Runs with Docker alone; the data, model, and sign-in keys are kept in Docker volumes
-- The model name and Ollama URL go in `appsettings.json` and can be overridden with environment variables
+- The model provider, name, URL and API key go in the `Llm` section of `appsettings.json` and can be overridden with environment variables
 - The UI meets WCAG AA contrast, works at phone width, and can be used with a keyboard
 
 ## Non-goals

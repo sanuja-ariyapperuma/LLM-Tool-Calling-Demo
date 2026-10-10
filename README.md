@@ -161,12 +161,12 @@ Each tool is a thin adapter over a method the admin pages already use:
 
 | Existing file | Lines added | What changed |
 |---|---|---|
-| `src/FinGuitar.Web/Program.cs` | +19 | Register the model client (with tool calling), the chat services, and the Ollama options |
-| `src/FinGuitar.Web/FinGuitar.Web.csproj` | +2 | Two package references: `Microsoft.Extensions.AI`, `OllamaSharp` |
-| `src/FinGuitar.Web/appsettings.json` | +5 | The `Ollama` section |
+| `src/FinGuitar.Web/Program.cs` | +19 | Register the model client (with tool calling), the chat services, and the `Llm` options |
+| `src/FinGuitar.Web/FinGuitar.Web.csproj` | +2 | Package references: `Microsoft.Extensions.AI`, `Microsoft.Extensions.AI.OpenAI`, `OllamaSharp` |
+| `src/FinGuitar.Web/appsettings.json` | +5 | The `Llm` section |
 | `src/FinGuitar.Web/Pages/Shared/_AdminLayout.cshtml` | +1 | The "Chat" menu item |
 | `src/FinGuitar.Web/Pages/Admin/Audit/Index.cshtml` | +29 / -2 | Chat badge, quoted request, owner-only "View in chat" link, "Confirmed twice" |
-| `docker-compose.yml` (outside `src/`) | +3 | The three `Ollama__*` settings for the `web` service |
+| `docker-compose.yml` (outside `src/`) | +3 | The `Llm__*` settings for the `web` service |
 
 That is five files under `src/`, 56 added lines, and no service, domain, or existing migration file.
 
@@ -174,7 +174,7 @@ That is five files under `src/`, 56 added lines, and no service, domain, or exis
 
 | New | Files |
 |---|---|
-| `Chat/` | `ChatService`, `ChatTools`, `ChatToolCatalog`, `ChatPrompt`, `ThinkStripper`, `ChatPayloads`, `ProposedActionService`, `CriticalActionPolicy`, `ChatStore`, `ChatModels`, `ToolResultLog`, `OllamaOptions` (12) |
+| `Chat/` | `ChatService`, `ChatTools`, `ChatToolCatalog`, `ChatPrompt`, `ThinkStripper`, `ChatPayloads`, `ProposedActionService`, `CriticalActionPolicy`, `ChatStore`, `ChatModels`, `ToolResultLog`, `LlmOptions` (12) |
 | Migration | `Data/Migrations/0002_chat.sql` (the three chat tables) |
 | Page | `Pages/Admin/Chat/Index` (2) |
 | Partials | `Pages/Shared/Chat/*` (13) |
@@ -192,7 +192,7 @@ No service, domain, or existing migration file changed. The audit trail was desi
 | Dapper + SQLite | Hand-written SQL, no ORM, a single database file that is easy to reset |
 | Cookie authentication, `PasswordHasher` | Part of ASP.NET Core, so no extra package; roles `Level1` and `Level2` |
 | Tailwind CSS v4 | Two custom themes (white shop, dark admin), built at build time, no CDN |
-| Microsoft.Extensions.AI + OllamaSharp | A standard chat-client interface with automatic tool calling |
+| Microsoft.Extensions.AI + OllamaSharp / OpenAI client | A standard chat-client interface with automatic tool calling, so the model provider is a setting |
 | `qwen3.5:4b` on Ollama | Small enough to run on a laptop, good at picking the right tool |
 | Docker Compose | One command starts the app, Ollama, and the model download |
 
@@ -257,7 +257,8 @@ Three services start: `ollama` (serves the model), `ollama-pull` (downloads the 
 - **Time zone:** set `TZ` so "today" matches yours: `TZ=Europe/London docker compose up`.
 - **Port:** set `WEB_PORT` if 8080 is taken: `WEB_PORT=9090 docker compose up`.
 - **GPU:** `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up` gives Ollama an NVIDIA GPU.
-- **Model and timeout:** `Ollama__Model` and `Ollama__TimeoutSeconds` in `docker-compose.yml` (the model to download is on the `ollama-pull` service).
+- **Model and timeout:** `Llm__Model` and `Llm__TimeoutSeconds` in `docker-compose.yml` (the model to download is on the `ollama-pull` service).
+- **A different LLM:** see "Use a different language model" below.
 
 ### Run without Docker (for developers)
 
@@ -271,12 +272,25 @@ cd ../..
 dotnet run --project src/FinGuitar.Web
 ```
 
-The settings are in `src/FinGuitar.Web/appsettings.json` (`Ollama:Endpoint`, `Ollama:Model`, `Ollama:TimeoutSeconds`) and can be overridden with environment variables such as `Ollama__Model`.
+The settings are in `src/FinGuitar.Web/appsettings.json` (`Llm:Provider`, `Llm:Endpoint`, `Llm:Model`, `Llm:ApiKey`, `Llm:TimeoutSeconds`) and can be overridden with environment variables such as `Llm__Model`.
+
+### Use a different language model
+
+The chat talks to the model through one `IChatClient`, chosen in `Program.cs` from the `Llm` settings. Two providers are built in:
+
+| `Llm__Provider` | Talks to | Example |
+|---|---|---|
+| `Ollama` (default) | An Ollama server: the bundled Docker one, one on another machine, or a local install | `Llm__Endpoint=http://my-gpu-box:11434` `Llm__Model=llama3.1:8b` |
+| `OpenAI` | Any OpenAI-compatible API: OpenAI, Azure OpenAI, Groq, OpenRouter, Together, Mistral, vLLM, LM Studio, or Ollama's own `/v1` endpoint | `Llm__Endpoint=https://api.openai.com/v1` `Llm__Model=gpt-4o-mini` `Llm__ApiKey=...` |
+
+For a hosted service, set the variables on the `web` service (in a `docker-compose.override.yml`, or on the command line) and leave the bundled `ollama` services unused. Keep the key out of `appsettings.json`: use the `Llm__ApiKey` environment variable or `dotnet user-secrets`. The chat reports an error for an unknown provider, or for `OpenAI` without a key.
+
+The model must support tool calling, because every chat answer relies on it. Small local models are the weakest at this; the app already guards against the usual slips (see "How it stays safe").
 
 ### Troubleshooting
 
 - **The chat says the model is still downloading:** the first `docker compose up` downloads about 3 GB. Watch it with `docker compose logs -f ollama-pull`.
-- **The chat says the assistant is not available:** check that Ollama is running (`docker compose ps`).
+- **The chat says the assistant is not available:** check that the model service is running (`docker compose ps` for the bundled Ollama) and, for a hosted service, that `Llm__Endpoint`, `Llm__Model` and `Llm__ApiKey` are right. The server log has the reason.
 - **The page has no styling (without Docker):** the CSS was not built. Run `npm ci && npm run css:build` in `src/FinGuitar.Web`.
 - **Port already in use:** set `WEB_PORT`.
 - **Slow answers:** on a CPU-only machine each answer can take 30 seconds or more, and the first one longer while the model loads. A GPU helps.

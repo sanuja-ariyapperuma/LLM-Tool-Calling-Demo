@@ -38,7 +38,7 @@ sequenceDiagram
     Chat->>LLM: ask
     LLM--xChat: unreachable, timed out, or model missing
     Chat->>DB: save an error message (marked as an error)
-    Chat-->>Page: "The assistant is not available right now.<br/>Check that Ollama is running."
+    Chat-->>Page: "The assistant is not available right now.<br/>Check that the language model service is running and configured."
     Note over Page,DB: The rest of the app is unaffected.<br/>Error messages are left out of the next prompt.
 ```
 
@@ -51,7 +51,7 @@ sequenceDiagram
 ## When things go wrong
 
 - A conversation address that is not yours or does not exist gives "Not found".
-- **Ollama stopped:** "The assistant is not available right now. Check that Ollama is running." Start Ollama and send again.
+- **The model service is stopped or misconfigured:** "The assistant is not available right now. Check that the language model service is running and configured." Start it (or fix the `Llm` settings) and send again.
 - **Model still downloading (first Docker start):** "The assistant is still downloading its model. Try again in a few minutes."
 
 ## Where in the code

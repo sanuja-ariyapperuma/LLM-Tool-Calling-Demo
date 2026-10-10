@@ -1,7 +1,9 @@
 using FinGuitar.Web.Chat;
 using FinGuitar.Web.Data;
 using Microsoft.Extensions.AI;
+using System.ClientModel;
 using OllamaSharp;
+using OpenAI;
 using FinGuitar.Web.Domain;
 using FinGuitar.Web.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -57,13 +59,25 @@ builder.Services.AddScoped<SalesService>();
 builder.Services.AddScoped<CartService>();
 
 // The chat: a model client with automatic tool calling, and the chat services.
-builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection("Ollama"));
+builder.Services.Configure<LlmOptions>(builder.Configuration.GetSection("Llm"));
 builder.Services.AddChatClient(sp =>
 {
-    var o = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OllamaOptions>>().Value;
-    // The per-turn timeout (Ollama:TimeoutSeconds) is applied by ChatService, so the HttpClient's own limit is generous.
-    var http = new HttpClient { BaseAddress = new Uri(o.Endpoint), Timeout = TimeSpan.FromMinutes(15) };
-    return new OllamaApiClient(http, o.Model);
+    var o = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<LlmOptions>>().Value;
+    // The per-turn timeout (Llm:TimeoutSeconds) is applied by ChatService, so the clients' own limits are generous.
+    var networkTimeout = TimeSpan.FromMinutes(15);
+    switch (o.Provider)
+    {
+        case LlmOptions.Ollama:
+            return new OllamaApiClient(new HttpClient { BaseAddress = new Uri(o.Endpoint), Timeout = networkTimeout }, o.Model);
+        case LlmOptions.OpenAI:
+            if (string.IsNullOrWhiteSpace(o.ApiKey))
+                throw new InvalidOperationException("Llm:ApiKey is required when Llm:Provider is OpenAI (set Llm__ApiKey).");
+            var client = new OpenAIClient(new ApiKeyCredential(o.ApiKey),
+                new OpenAIClientOptions { Endpoint = new Uri(o.Endpoint), NetworkTimeout = networkTimeout });
+            return client.GetChatClient(o.Model).AsIChatClient();
+        default:
+            throw new InvalidOperationException($"Llm:Provider must be '{LlmOptions.Ollama}' or '{LlmOptions.OpenAI}', not '{o.Provider}'.");
+    }
 }).UseFunctionInvocation(configure: f => f.MaximumIterationsPerRequest = ChatService.MaxToolRounds);
 builder.Services.AddScoped<ChatStore>();
 builder.Services.AddScoped<ToolResultLog>();

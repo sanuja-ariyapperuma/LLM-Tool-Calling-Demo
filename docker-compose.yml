@@ -30,9 +30,10 @@ services:
       - "${WEB_PORT:-8080}:8080"
     environment:
       ConnectionStrings__Default: "Data Source=/app/data/finguitar.db"
-      Ollama__Endpoint: "http://ollama:11434"
-      Ollama__Model: "qwen3.5:4b"
-      Ollama__TimeoutSeconds: "180"
+      Llm__Provider: "Ollama"
+      Llm__Endpoint: "http://ollama:11434"
+      Llm__Model: "qwen3.5:4b"
+      Llm__TimeoutSeconds: "180"
       ASPNETCORE_ENVIRONMENT: Production
       TZ: ${TZ:-UTC}
     volumes:

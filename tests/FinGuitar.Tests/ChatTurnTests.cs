@@ -29,7 +29,7 @@ public class ChatTurnTests
             .UseFunctionInvocation(configure: f => f.MaximumIterationsPerRequest = ChatService.MaxToolRounds)
             .Build();
         return new ChatService(c.Env.Db.Db, c.Store, c.Actions, c.Catalog, c.Log, c.Env.User, client,
-            Options.Create(new OllamaOptions { TimeoutSeconds = timeoutSeconds }), NullLogger<ChatService>.Instance);
+            Options.Create(new LlmOptions { TimeoutSeconds = timeoutSeconds }), NullLogger<ChatService>.Instance);
     }
 
     private static Task<List<FinGuitar.Web.Chat.ChatMessage>> Messages(ChatTestEnv c, int conversationId) =>
@@ -188,7 +188,7 @@ public class ChatTurnTests
 
         var reply = result.NewMessages[1];
         Assert.True(reply.IsError);
-        Assert.Equal("The assistant is not available right now. Check that Ollama is running.", reply.Text);
+        Assert.Equal("The assistant is not available right now. Check that the language model service is running and configured.", reply.Text);
         Assert.Equal(2, (await Messages(c, result.Conversation.Id)).Count);
     }
 

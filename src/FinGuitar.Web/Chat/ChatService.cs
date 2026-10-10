@@ -13,13 +13,13 @@ public record SendResult(ChatConversation Conversation, IReadOnlyList<ChatMessag
 /// <summary>One chat turn (2.6.3): validate, save the user message, ask the model with this role's tools, save the reply.</summary>
 public class ChatService(
     Db db, ChatStore store, ProposedActionService actions, ChatToolCatalog catalog, ToolResultLog log, CurrentUser user,
-    IChatClient client, IOptions<OllamaOptions> options, ILogger<ChatService> logger)
+    IChatClient client, IOptions<LlmOptions> options, ILogger<ChatService> logger)
 {
     public const int MaxMessageLength = 1000;
     public const int HistoryMessages = 20;
     public const int MaxToolRounds = 5;
 
-    public const string Unavailable = "The assistant is not available right now. Check that Ollama is running.";
+    public const string Unavailable = "The assistant is not available right now. Check that the language model service is running and configured.";
     public const string ModelDownloading = "The assistant is still downloading its model. Try again in a few minutes.";
     public const string RoundLimit = "I couldn't finish that. Try asking more specifically.";
     public const string SomethingWrong = "Something went wrong. Please try again.";
@@ -116,8 +116,10 @@ public class ChatService(
         {
             return (ModelDownloading, true);
         }
-        catch (HttpRequestException)
+        catch (Exception ex) when (ex is HttpRequestException or System.ClientModel.ClientResultException)
         {
+            // The OpenAI client reports HTTP failures (bad key, wrong model or endpoint) as ClientResultException.
+            logger.LogWarning(ex, "The language model service could not be used");
             return (Unavailable, true);
         }
         catch (Exception ex)
