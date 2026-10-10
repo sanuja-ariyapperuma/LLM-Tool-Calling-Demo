@@ -1,0 +1,24 @@
+@using FinGuitar.Web.Chat
+@model (ProposedActionStatus Status, string? Result)
+@* The state of a card once it has no buttons (or has not got them yet). The status is never shown by colour alone. *@
+@switch (Model.Status)
+{
+    case ProposedActionStatus.AwaitingFinalConfirm:
+        <p class="mt-3"><span class="badge badge-pending">Waiting for the final confirmation</span></p>
+        break;
+    case ProposedActionStatus.Applying:
+        <p class="mt-3"><span class="badge badge-neutral">Outcome unknown. Check the audit page.</span></p>
+        break;
+    case ProposedActionStatus.Confirmed:
+        <p class="mt-3"><span class="badge badge-ok">✓ Confirmed</span></p>
+        break;
+    case ProposedActionStatus.Cancelled:
+        <p class="mt-3"><span class="badge badge-neutral">Cancelled</span></p>
+        break;
+    case ProposedActionStatus.Expired:
+        <p class="mt-3"><span class="badge badge-neutral">Expired. Ask again.</span></p>
+        break;
+    case ProposedActionStatus.Failed:
+        <p class="mt-3"><span class="badge badge-fail">Failed</span> <span class="text-sm">@Model.Result</span></p>
+        break;
+}

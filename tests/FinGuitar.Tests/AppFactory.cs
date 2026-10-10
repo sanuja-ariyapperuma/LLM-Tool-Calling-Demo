@@ -5,11 +5,15 @@ using Dapper;
 using FinGuitar.Web.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.AI;
 
 namespace FinGuitar.Tests;
 
 /// <summary>The real app on a throwaway SQLite file, seeded at startup like a first run.</summary>
-public sealed class AppFactory : WebApplicationFactory<Program>
+public sealed class AppFactory(Func<IList<Microsoft.Extensions.AI.ChatMessage>, Microsoft.Extensions.AI.ChatOptions?, Microsoft.Extensions.AI.ChatResponse>? model = null)
+    : WebApplicationFactory<Program>
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "finguitar-test-" + Guid.NewGuid().ToString("N"));
 
@@ -18,6 +22,14 @@ public sealed class AppFactory : WebApplicationFactory<Program>
         Directory.CreateDirectory(_dir);
         builder.UseSetting("ConnectionStrings:Default", $"Data Source={Path.Combine(_dir, "test.db")};Pooling=False");
         builder.UseEnvironment("Production");
+        // The chat talks to a scripted model, never to a real Ollama.
+        builder.ConfigureTestServices(services =>
+        {
+            var inner = new ScriptedClient(model ?? ScriptedClient.Sensible);
+            services.RemoveAll<Microsoft.Extensions.AI.IChatClient>();
+            services.AddSingleton<Microsoft.Extensions.AI.IChatClient>(
+                new Microsoft.Extensions.AI.ChatClientBuilder(inner).UseFunctionInvocation().Build());
+        });
     }
 
     public HttpClient NewClient() => CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

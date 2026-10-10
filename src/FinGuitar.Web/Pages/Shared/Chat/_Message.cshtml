@@ -1,0 +1,46 @@
+@using FinGuitar.Web.Chat
+@using FinGuitar.Web.Domain
+@inject ProposedActionService Actions
+@model ChatMessage
+@{
+    var payload = ChatPayloadJson.Deserialize(Model.PayloadKind, Model.PayloadJson);
+}
+@* Message text is HTML-encoded and never rendered as markdown. *@
+<div id="m@(Model.Id)" class="@(Model.Role == MessageRole.User ? "flex justify-end" : "")">
+    @if (Model.Role == MessageRole.User)
+    {
+        <div class="chat-bubble-user whitespace-pre-wrap break-words">@Model.Text</div>
+    }
+    else
+    {
+        <div class="chat-bubble-assistant @(Model.IsError ? "border-rose-400" : "")">
+            @if (Model.Role == MessageRole.ActionResult)
+            {
+                <span class="@(Model.IsError ? "badge badge-fail" : "badge badge-ok") mr-1">@(Model.IsError ? "Not changed" : "Done")</span>
+            }
+            <p class="whitespace-pre-wrap break-words">@Model.Text</p>
+            @switch (payload)
+            {
+                case OrderTablePayload p: <partial name="Chat/_OrderTable" model="p" /> break;
+                case OrderDetailPayload p: <partial name="Chat/_OrderDetail" model="p" /> break;
+                case ProductTablePayload p: <partial name="Chat/_ProductTable" model="p" /> break;
+                case CustomerTablePayload p: <partial name="Chat/_CustomerTable" model="p" /> break;
+                case CustomerDetailPayload p: <partial name="Chat/_CustomerDetail" model="p" /> break;
+                case SalesSummaryPayload p: <partial name="Chat/_SalesSummary" model="p" /> break;
+                case TopProductsPayload p: <partial name="Chat/_TopProducts" model="p" /> break;
+                case ProposalCardPayload p:
+                {
+                    var action = await Actions.GetForViewAsync(p.ActionId);
+                    if (action is not null) { <partial name="Chat/_ProposalCard" model="action" /> }
+                    break;
+                }
+                case FinalConfirmCardPayload p:
+                {
+                    var action = await Actions.GetForViewAsync(p.ActionId);
+                    if (action is not null) { <partial name="Chat/_FinalConfirmCard" model="action" /> }
+                    break;
+                }
+            }
+        </div>
+    }
+</div>

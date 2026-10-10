@@ -1,0 +1,22 @@
+@using FinGuitar.Web.Chat
+@model OrderDetailPayload
+<div class="mt-3 rounded-md border border-backstage-line p-3">
+    <div class="flex flex-wrap items-center gap-2">
+        <a class="font-semibold text-sunburst underline" href="/Admin/Orders/Details/@Model.Id">Order #@Model.Id</a>
+        <span class="@UiHelpers.StatusBadge(Enum.Parse<OrderStatus>(Model.Status))">@Model.Status</span>
+        <span class="text-backstage-muted">@Model.Date</span>
+    </div>
+    <p class="mt-1"><a class="underline" href="/Admin/Customers/Details/@Model.CustomerId">@Model.Customer</a></p>
+    <div class="mt-2 overflow-x-auto">
+        <table class="data-table">
+            <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Unit price</th></tr></thead>
+            <tbody>
+            @foreach (var l in Model.Lines)
+            {
+                <tr><td><a class="underline" href="/Admin/Products/Details/@l.ProductId">@l.Product</a></td><td class="num">@l.Quantity</td><td class="num">@UiHelpers.Money(l.UnitPrice)</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <p class="mt-2 text-right font-semibold">Total @UiHelpers.Money(Model.Total)</p>
+</div>

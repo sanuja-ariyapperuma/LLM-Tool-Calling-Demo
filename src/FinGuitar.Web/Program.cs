@@ -1,4 +1,7 @@
+using FinGuitar.Web.Chat;
 using FinGuitar.Web.Data;
+using Microsoft.Extensions.AI;
+using OllamaSharp;
 using FinGuitar.Web.Domain;
 using FinGuitar.Web.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -52,6 +55,22 @@ builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<SalesService>();
 builder.Services.AddScoped<CartService>();
+
+// The chat: a model client with automatic tool calling, and the chat services.
+builder.Services.Configure<OllamaOptions>(builder.Configuration.GetSection("Ollama"));
+builder.Services.AddChatClient(sp =>
+{
+    var o = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OllamaOptions>>().Value;
+    // The per-turn timeout (Ollama:TimeoutSeconds) is applied by ChatService, so the HttpClient's own limit is generous.
+    var http = new HttpClient { BaseAddress = new Uri(o.Endpoint), Timeout = TimeSpan.FromMinutes(15) };
+    return new OllamaApiClient(http, o.Model);
+}).UseFunctionInvocation(configure: f => f.MaximumIterationsPerRequest = ChatService.MaxToolRounds);
+builder.Services.AddScoped<ChatStore>();
+builder.Services.AddScoped<ToolResultLog>();
+builder.Services.AddScoped<ProposedActionService>();
+builder.Services.AddScoped<ChatTools>();
+builder.Services.AddScoped<ChatToolCatalog>();
+builder.Services.AddScoped<ChatService>();
 
 var dataSource = new SqliteConnectionStringBuilder(builder.Configuration.GetConnectionString("Default")).DataSource;
 var dataDir = Path.GetDirectoryName(Path.GetFullPath(dataSource)) ?? ".";

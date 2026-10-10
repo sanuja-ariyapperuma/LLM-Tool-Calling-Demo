@@ -1,0 +1,21 @@
+@using FinGuitar.Web.Chat
+@model TopProductsPayload
+<div class="mt-3 overflow-x-auto">
+    @if (Model.Rows.Count == 0)
+    {
+        <p class="text-backstage-muted">No sales in that period.</p>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead><tr><th>Product</th><th class="num">Units</th><th class="num">Revenue</th></tr></thead>
+            <tbody>
+            @foreach (var r in Model.Rows)
+            {
+                <tr><td><a class="text-sunburst underline" href="/Admin/Products/Details/@r.ProductId">@r.Name</a></td><td class="num">@r.Units</td><td class="num">@UiHelpers.Money(r.Revenue)</td></tr>
+            }
+            </tbody>
+        </table>
+        <p class="mt-2 text-xs text-backstage-muted">@Model.From to @Model.To, not counting cancelled orders</p>
+    }
+</div>

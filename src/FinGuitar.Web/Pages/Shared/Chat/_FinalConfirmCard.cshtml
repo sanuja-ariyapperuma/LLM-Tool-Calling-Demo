@@ -1,0 +1,27 @@
+@using FinGuitar.Web.Chat
+@inject TimeProvider Time
+@inject ProposedActionService Actions
+@model ProposedAction
+@{
+    var status = Model.EffectiveStatus(Time.GetLocalNow().DateTime);
+    var verdict = Actions.EvaluateStored(Model);
+}
+<div id="card-@(Model.Id)-final" class="proposal-card critical">
+    <div class="mb-1 flex items-center gap-1 text-sm font-semibold text-rose-300"><span aria-hidden="true">⚠</span> Final confirmation</div>
+    <p class="text-base font-bold">@(Model.CriticalWarning ?? verdict.Warning)</p>
+    <p class="mt-1 text-sm text-backstage-muted">@Model.Summary</p>
+    @if (status == ProposedActionStatus.AwaitingFinalConfirm)
+    {
+        @* Safe button on the left, danger on the right (the reverse of the first card), and the danger button
+           stays disabled for the first second, so a double click cannot confirm both steps by accident. *@
+        <div class="mt-3 flex gap-2">
+            <button type="button" class="btn btn-ghost" data-card-action="Cancel" data-id="@Model.Id">@verdict.KeepLabel</button>
+            <button type="button" class="btn btn-danger" data-card-action="FinalConfirm" data-id="@Model.Id" data-delay="1000" disabled>@verdict.DangerLabel</button>
+        </div>
+        <p class="mt-2 text-xs text-backstage-muted">Use the buttons to confirm. Sending a message expires this card.</p>
+    }
+    else
+    {
+        <partial name="Chat/_ActionStatus" model="(status, Model.ResultText)" />
+    }
+</div>

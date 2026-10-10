@@ -1,7 +1,11 @@
 @page
 @model FinGuitar.Web.Pages.Admin.Audit.IndexModel
 @using FinGuitar.Web.Pages.Admin.Audit
-@{ ViewData["Title"] = "Audit"; }
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Audit";
+    var me = User.FindFirstValue(ClaimTypes.NameIdentifier);
+}
 
 <h1 class="font-display text-2xl font-semibold">Audit trail</h1>
 <p class="mt-1 text-sm text-backstage-muted">Every change to orders and products, newest first. Entries cannot be edited or deleted.</p>
@@ -55,7 +59,16 @@
                 <tr>
                     <td class="whitespace-nowrap">@UiHelpers.Stamp(e.OccurredAt)</td>
                     <td>@e.UserEmail <span class="badge badge-neutral">@e.UserRole</span></td>
-                    <td>@UiHelpers.SourceLabel(e.Source)</td>
+                    <td>
+                        @if (e.Source == ChangeSource.Chat)
+                        {
+                            <span class="badge badge-chat"><span aria-hidden="true">💬</span> Chat</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-neutral"><span aria-hidden="true">▦</span> Admin panel</span>
+                        }
+                    </td>
                     <td>
                         @if (e.EntityType == "Order")
                         {
@@ -67,6 +80,16 @@
                         }
                     </td>
                     <td>
+                        @if (e.Source == ChangeSource.Chat)
+                        {
+                            <div class="mb-1 flex flex-wrap items-center gap-2">
+                                @if (e.ConfirmationCount == 2) { <span class="badge badge-twice">Confirmed twice</span> }
+                                @if (e.ConversationId is not null && me == e.UserId.ToString())
+                                {
+                                    <a class="text-xs text-sunburst underline" href="/Admin/Chat?c=@e.ConversationId#m@(e.ChatMessageId)">View in chat</a>
+                                }
+                            </div>
+                        }
                         <details>
                             <summary class="cursor-pointer">@e.Summary</summary>
                             <table class="mt-2 text-xs">
@@ -79,6 +102,10 @@
                                 </tbody>
                             </table>
                         </details>
+                        @if (e.Source == ChangeSource.Chat)
+                        {
+                            <blockquote class="mt-1 border-l-2 border-sunburst pl-2 text-xs text-backstage-muted">“@e.ChatRequestText”</blockquote>
+                        }
                     </td>
                 </tr>
             }

@@ -1,0 +1,14 @@
+@using FinGuitar.Web.Pages.Admin.Chat
+@model ActionUpdateView
+@* The response to Confirm, Final confirm and Cancel: the cards in their new state (chat.js swaps them in by id),
+   any notice, and any messages the server added (the final card, or the result). *@
+<div data-card-replace="card-@(Model.Action.Id)-proposal"><partial name="Chat/_ProposalCard" model="Model.Action" /></div>
+@if (Model.Action.IsCritical)
+{
+    <div data-card-replace="card-@(Model.Action.Id)-final"><partial name="Chat/_FinalConfirmCard" model="Model.Action" /></div>
+}
+@if (!string.IsNullOrEmpty(Model.Notice))
+{
+    <div data-notice>@Model.Notice</div>
+}
+<partial name="Chat/_Messages" model="Model.NewMessages" />

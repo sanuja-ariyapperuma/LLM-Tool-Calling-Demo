@@ -1,0 +1,26 @@
+@using FinGuitar.Web.Chat
+@inject TimeProvider Time
+@model ProposedAction
+@{
+    // The status comes from the database, not from saved JSON, so a reloaded card is always right (FR-C11).
+    var status = Model.EffectiveStatus(Time.GetLocalNow().DateTime);
+}
+<div id="card-@(Model.Id)-proposal" class="proposal-card @(Model.IsCritical ? "critical" : "")">
+    @if (Model.IsCritical)
+    {
+        <div class="mb-1 flex items-center gap-1 text-sm font-semibold text-rose-300"><span aria-hidden="true">⚠</span> Critical action</div>
+    }
+    <p class="text-base font-semibold">@Model.Summary</p>
+    @if (status == ProposedActionStatus.Pending)
+    {
+        <div class="mt-3 flex gap-2">
+            <button type="button" class="btn btn-primary" data-card-action="Confirm" data-id="@Model.Id">Confirm</button>
+            <button type="button" class="btn btn-ghost" data-card-action="Cancel" data-id="@Model.Id">Cancel</button>
+        </div>
+        <p class="mt-2 text-xs text-backstage-muted">Use the buttons to confirm. Sending a message expires this card.</p>
+    }
+    else
+    {
+        <partial name="Chat/_ActionStatus" model="(status, Model.ResultText)" />
+    }
+</div>

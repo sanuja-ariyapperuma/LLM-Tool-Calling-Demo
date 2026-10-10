@@ -1,0 +1,68 @@
+@page
+@model FinGuitar.Web.Pages.Admin.Chat.IndexModel
+@using FinGuitar.Web.Pages.Admin.Chat
+@using FinGuitar.Web.Chat
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Chat";
+    var isLevel1 = User.IsInRole(Roles.Level1);
+}
+
+<div class="grid gap-4 lg:grid-cols-[16rem_1fr]">
+    <aside aria-label="Conversations" class="lg:h-[calc(100vh-3rem)] lg:overflow-y-auto">
+        <a asp-page="/Admin/Chat/Index" class="btn btn-primary w-full">New chat</a>
+        <ul class="mt-3 space-y-1 text-sm">
+            @foreach (var c in Model.Conversations)
+            {
+                var active = Model.Current?.Id == c.Id;
+                <li>
+                    <a asp-page="/Admin/Chat/Index" asp-route-c="@c.Id"
+                       class="block truncate rounded-md px-3 py-2 @(active ? "bg-backstage-raised font-semibold text-sunburst" : "hover:bg-backstage-raised")"
+                       aria-current="@(active ? "page" : null)">@c.Title</a>
+                </li>
+            }
+            @if (Model.Conversations.Count == 0)
+            {
+                <li class="px-3 py-2 text-backstage-muted">No conversations yet.</li>
+            }
+        </ul>
+    </aside>
+
+    <section class="flex min-h-[70vh] flex-col lg:h-[calc(100vh-3rem)]" aria-label="Chat">
+        <h1 class="font-display text-2xl font-semibold">Chat</h1>
+
+        <div id="messages" class="mt-3 flex-1 space-y-3 overflow-y-auto pr-1" aria-live="polite">
+            @if (Model.Messages.Count == 0)
+            {
+                <div id="empty-hint" class="card p-4 text-sm text-backstage-muted">
+                    <p class="font-semibold text-backstage-text">Ask about orders, products, customers or sales.</p>
+                    <ul class="mt-2 list-disc space-y-1 pl-5">
+                        <li>What are the pending orders?</li>
+                        <li>Show today's orders</li>
+                        <li>Which guitars are low on stock?</li>
+                        @if (isLevel1)
+                        {
+                            <li>Order 42 is dispatched</li>
+                        }
+                    </ul>
+                </div>
+            }
+            @foreach (var m in Model.Messages)
+            {
+                <partial name="Chat/_Message" model="m" />
+            }
+        </div>
+
+        <form id="chat-form" class="mt-3 flex gap-2" data-conversation-id="@Model.Current?.Id" data-send-url="@Url.Page("/Admin/Chat/Index", "Send")">
+            @Html.AntiForgeryToken()
+            <label for="chat-text" class="sr-only">Message</label>
+            <textarea id="chat-text" rows="2" maxlength="1000" class="input flex-1 resize-none" placeholder="Ask something…"></textarea>
+            <button id="chat-send" type="submit" class="btn btn-primary self-end">Send</button>
+        </form>
+        <p id="chat-error" role="alert" class="mt-1 hidden text-sm text-rose-300"></p>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/chat.js" asp-append-version="true"></script>
+}

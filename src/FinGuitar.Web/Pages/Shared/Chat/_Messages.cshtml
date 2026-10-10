@@ -1,0 +1,6 @@
+@using FinGuitar.Web.Chat
+@model IReadOnlyList<ChatMessage>
+@foreach (var m in Model)
+{
+    <partial name="Chat/_Message" model="m" />
+}

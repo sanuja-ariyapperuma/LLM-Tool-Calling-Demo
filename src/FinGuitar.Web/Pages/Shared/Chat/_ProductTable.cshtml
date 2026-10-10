@@ -1,0 +1,27 @@
+@using FinGuitar.Web.Chat
+@model ProductTablePayload
+<div class="mt-3 overflow-x-auto">
+    @if (Model.Rows.Count == 0)
+    {
+        <p class="text-backstage-muted">No products found.</p>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead><tr><th>Product</th><th>Brand</th><th>Category</th><th class="num">Price</th><th class="num">Stock</th></tr></thead>
+            <tbody>
+            @foreach (var r in Model.Rows)
+            {
+                <tr>
+                    <td><a class="text-sunburst underline" href="/Admin/Products/Details/@r.Id">@r.Name</a> <span class="text-xs text-backstage-muted">#@r.Id</span></td>
+                    <td>@r.Brand</td>
+                    <td>@r.Category</td>
+                    <td class="num">@UiHelpers.Money(r.Price)</td>
+                    <td class="num">@r.Stock</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+        <p class="mt-2 text-xs text-backstage-muted">Showing @Model.Rows.Count of @Model.TotalCount</p>
+    }
+</div>
