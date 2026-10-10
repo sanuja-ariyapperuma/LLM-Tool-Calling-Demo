@@ -98,7 +98,7 @@ public class ChatService(
             var response = await client.GetResponseAsync(messages, chatOptions, cts.Token);
 
             var rounds = response.Messages.Count(m => m.Contents.OfType<FunctionCallContent>().Any());
-            var text = ThinkStripper.Strip(response.Text);
+            var text = ThinkStripper.StripShownNotes(ThinkStripper.Strip(response.Text));
             if (rounds >= MaxToolRounds) return (RoundLimit, true); // D22: the limit was reached without a real answer
             return (text, false);
         }

@@ -237,6 +237,15 @@ public class ChatTurnTests
     }
 
     [Fact]
+    public async Task A_copied_Shown_note_is_removed_from_the_reply()
+    {
+        await using var c = await ChatTestEnv.CreateAsync();
+        var svc = NewService(c, new ScriptedClient((_, _) => ScriptedClient.Say("Please confirm. [Shown: confirmation card: Change order 44] Thanks.")));
+        var reply = (await svc.SendAsync(null, "hello")).NewMessages[1];
+        Assert.Equal("Please confirm.  Thanks.", reply.Text);
+    }
+
+    [Fact]
     public async Task Think_text_is_stripped_before_saving()
     {
         await using var c = await ChatTestEnv.CreateAsync();

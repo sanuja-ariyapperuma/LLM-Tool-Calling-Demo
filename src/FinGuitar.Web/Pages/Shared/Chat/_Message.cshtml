@@ -16,7 +16,8 @@
         <div class="chat-bubble-assistant @(Model.IsError ? "border-rose-400" : "")">
             @if (Model.Role == MessageRole.ActionResult)
             {
-                <span class="@(Model.IsError ? "badge badge-fail" : "badge badge-ok") mr-1">@(Model.IsError ? "Not changed" : "Done")</span>
+                var cancelled = Model.Text.StartsWith("Cancelled.", StringComparison.Ordinal);
+                <span class="@(Model.IsError ? "badge badge-fail" : cancelled ? "badge badge-neutral" : "badge badge-ok") mr-1">@(Model.IsError ? "Not changed" : cancelled ? "Cancelled" : "Done")</span>
             }
             <p class="whitespace-pre-wrap break-words">@Model.Text</p>
             @switch (payload)

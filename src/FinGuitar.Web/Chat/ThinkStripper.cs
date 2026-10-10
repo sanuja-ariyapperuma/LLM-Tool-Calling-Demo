@@ -11,6 +11,13 @@ public static partial class ThinkStripper
     [GeneratedRegex(@"<think>.*$", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
     private static partial Regex Unclosed();
 
+    [GeneratedRegex(@"\[Shown:[^\]]*\]", RegexOptions.IgnoreCase)]
+    private static partial Regex ShownNote();
+
+    /// <summary>The "[Shown: …]" notes are history hints for the model; if it copies one into its reply, remove it.</summary>
+    public static string StripShownNotes(string? text) =>
+        string.IsNullOrEmpty(text) ? "" : ShownNote().Replace(text, "").Trim();
+
     public static string Strip(string? text)
     {
         if (string.IsNullOrEmpty(text)) return "";
