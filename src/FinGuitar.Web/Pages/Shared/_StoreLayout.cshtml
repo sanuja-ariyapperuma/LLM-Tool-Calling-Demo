@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@(ViewData["Title"] ?? "FinGuitar")</title>
+    <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
+</head>
+<body class="theme-showroom min-h-screen flex flex-col">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:bg-white focus:p-2">Skip to content</a>
+    <header class="border-b border-showroom-line">
+        <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+            <a asp-page="/Index" class="font-display text-2xl font-semibold">FinGuitar</a>
+            <nav class="flex items-center gap-5 text-sm" aria-label="Main">
+                <a asp-page="/Index" class="hover:underline">Guitars</a>
+                <a asp-page="/Cart" class="hover:underline">Cart@(ViewData["CartCount"] is int n and > 0 ? $" ({n})" : "")</a>
+                <a asp-page="/Admin/Index" class="text-showroom-muted hover:underline">Admin</a>
+            </nav>
+        </div>
+    </header>
+    <main id="main" class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+        @RenderBody()
+    </main>
+    <footer class="border-t border-showroom-line py-4 text-center text-xs text-showroom-muted">
+        FinGuitar is a demo shop. Nothing here is for sale.
+    </footer>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

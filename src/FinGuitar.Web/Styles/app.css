@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@source "../Pages/**/*.cshtml";
+@source "../wwwroot/js/**/*.js";
+@source "../Services/**/*.cs";
+@source "../Chat/**/*.cs";
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+
+  /* Showroom (storefront, white) */
+  --color-showroom-bg: #ffffff;
+  --color-showroom-ink: #14161a;
+  --color-showroom-muted: #5b6370;
+  --color-showroom-stage: #f6f3ee;
+  --color-showroom-line: #e7e3dc;
+  --color-sunburst-from: #f59e0b;
+  --color-sunburst-to: #b4231b;
+  --color-sunburst-deep: #b4231b;
+
+  /* Backstage (admin, dark) */
+  --color-backstage-bg: #0b0d10;
+  --color-backstage-panel: #14171c;
+  --color-backstage-raised: #1b1f26;
+  --color-backstage-line: #262b33;
+  --color-backstage-text: #e6e8eb;
+  --color-backstage-muted: #9aa3ae;
+  --color-sunburst: #f59e0b;
+
+  /* Status colours */
+  --color-status-pending: #f59e0b;
+  --color-status-dispatched: #38bdf8;
+  --color-status-delivered: #34d399;
+  --color-status-cancelled: #fb7185;
+  --color-danger: #e11d48;
+  --color-danger-edge: #f43f5e;
+}
+
+@layer base {
+  html { color-scheme: light; }
+  body { font-family: var(--font-sans); }
+  body.theme-backstage { background: var(--color-backstage-bg); color: var(--color-backstage-text); color-scheme: dark; }
+  body.theme-showroom { background: var(--color-showroom-bg); color: var(--color-showroom-ink); }
+  :focus-visible { outline: 2px solid var(--color-sunburst-deep); outline-offset: 2px; }
+  .theme-backstage :focus-visible { outline-color: var(--color-sunburst); }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  }
+}
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50; }
+  /* Showroom buttons */
+  .theme-showroom .btn-primary { @apply bg-sunburst-deep text-white hover:bg-red-900; }
+  .theme-showroom .btn-ghost { @apply border border-showroom-line text-showroom-ink hover:bg-showroom-stage; }
+  /* Backstage buttons */
+  .theme-backstage .btn-primary { @apply bg-sunburst text-backstage-bg hover:bg-amber-400; }
+  .theme-backstage .btn-ghost { @apply border border-backstage-line text-backstage-text hover:bg-backstage-raised; }
+  .btn-danger { @apply bg-danger text-white hover:bg-rose-700; }
+
+  .card { @apply rounded-lg border; }
+  .theme-showroom .card { @apply border-showroom-line bg-white; }
+  .theme-backstage .card { @apply border-backstage-line bg-backstage-panel; }
+
+  .input { @apply w-full rounded-md border px-3 py-2 text-sm; }
+  .theme-showroom .input { @apply border-showroom-line bg-white text-showroom-ink; }
+  .theme-backstage .input { @apply border-backstage-line bg-backstage-raised text-backstage-text placeholder:text-backstage-muted; }
+
+  .badge { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium; }
+  .badge-pending { background: color-mix(in srgb, var(--color-status-pending) 15%, transparent); color: var(--color-status-pending); }
+  .badge-dispatched { background: color-mix(in srgb, var(--color-status-dispatched) 15%, transparent); color: var(--color-status-dispatched); }
+  .badge-delivered { background: color-mix(in srgb, var(--color-status-delivered) 15%, transparent); color: var(--color-status-delivered); }
+  .badge-cancelled { background: color-mix(in srgb, var(--color-status-cancelled) 15%, transparent); color: var(--color-status-cancelled); }
+  .badge-neutral { @apply bg-backstage-raised text-backstage-muted border border-backstage-line; }
+  .badge-chat { background: color-mix(in srgb, var(--color-sunburst) 15%, transparent); color: var(--color-sunburst); }
+  .badge-twice { @apply border text-rose-300; border-color: var(--color-danger-edge); }
+  .badge-ok { background: color-mix(in srgb, var(--color-status-delivered) 15%, transparent); color: var(--color-status-delivered); }
+  .badge-fail { background: color-mix(in srgb, var(--color-status-cancelled) 15%, transparent); color: var(--color-status-cancelled); }
+
+  .data-table { @apply w-full border-collapse text-sm; }
+  .data-table th { @apply sticky top-0 bg-backstage-raised px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-backstage-muted; }
+  .data-table td { @apply border-t border-backstage-line px-3 py-2 align-top; }
+  .data-table tbody tr:hover { @apply bg-backstage-raised; }
+  .data-table .num { @apply text-right tabular-nums; }
+
+  .chat-bubble-user { @apply ml-auto max-w-[85%] rounded-lg px-4 py-2 text-sm; background: color-mix(in srgb, var(--color-sunburst) 14%, transparent); }
+  .chat-bubble-assistant { @apply max-w-full rounded-lg border border-backstage-line bg-backstage-panel px-4 py-3 text-sm; }
+  .proposal-card { @apply mt-3 rounded-md border border-backstage-line bg-backstage-raised p-4; border-left: 4px solid var(--color-sunburst); }
+  .proposal-card.critical { border-color: var(--color-danger-edge); border-left-width: 4px; }
+
+  .thinking-dot { @apply inline-block h-2 w-2 rounded-full bg-backstage-muted; animation: pulse-dot 1.2s infinite ease-in-out; }
+  .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+}
+
+@keyframes pulse-dot { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }

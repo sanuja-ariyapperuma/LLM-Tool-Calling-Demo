@@ -1,0 +1,61 @@
+@using System.Security.Claims
+@{
+    var role = User.FindFirstValue(ClaimTypes.Role);
+    var email = User.Identity?.Name;
+    var path = Context.Request.Path.Value ?? "";
+    string Nav(string prefix) => path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+        ? "bg-backstage-raised text-sunburst font-semibold" : "text-backstage-text hover:bg-backstage-raised";
+    var dashActive = path.TrimEnd('/').Equals("/Admin", StringComparison.OrdinalIgnoreCase);
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@(ViewData["Title"] ?? "Admin") · FinGuitar</title>
+    <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
+</head>
+<body class="theme-backstage min-h-screen md:flex">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:bg-backstage-panel focus:p-2">Skip to content</a>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <aside class="border-b border-backstage-line bg-backstage-panel md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r">
+            <div class="flex items-center justify-between px-4 py-3 md:block">
+                <a asp-page="/Admin/Index" class="font-display text-xl font-semibold">FinGuitar <span class="font-sans text-xs text-backstage-muted">Backstage</span></a>
+                <button type="button" class="btn btn-ghost md:hidden" aria-expanded="false" aria-controls="admin-nav" id="menu-button">Menu</button>
+            </div>
+            <div id="admin-nav" class="hidden px-2 pb-3 md:flex md:h-[calc(100%-4rem)] md:flex-col md:justify-between">
+                <nav class="flex flex-col gap-1 text-sm" aria-label="Admin">
+                    <a asp-page="/Admin/Index" class="rounded-md px-3 py-2 @(dashActive ? "bg-backstage-raised text-sunburst font-semibold" : "text-backstage-text hover:bg-backstage-raised")">Dashboard</a>
+                    <a asp-page="/Admin/Orders/Index" class="rounded-md px-3 py-2 @Nav("/Admin/Orders")">Orders</a>
+                    <a asp-page="/Admin/Products/Index" class="rounded-md px-3 py-2 @Nav("/Admin/Products")">Products</a>
+                    <a asp-page="/Admin/Customers/Index" class="rounded-md px-3 py-2 @Nav("/Admin/Customers")">Customers</a>
+                    <a asp-page="/Admin/Audit/Index" class="rounded-md px-3 py-2 @Nav("/Admin/Audit")">Audit</a>
+                </nav>
+                <div class="mt-4 border-t border-backstage-line px-3 pt-3 text-sm">
+                    <div class="truncate text-backstage-muted">@email</div>
+                    <div class="mt-1"><span class="badge badge-neutral">@(role == "Level1" ? "Level1 · full access" : "Level2 · read only")</span></div>
+                    <form method="post" asp-page="/Account/Logout" class="mt-3">
+                        <button type="submit" class="btn btn-ghost w-full">Sign out</button>
+                    </form>
+                    <a asp-page="/Index" class="mt-3 block text-xs text-backstage-muted hover:underline">View storefront</a>
+                </div>
+            </div>
+        </aside>
+    }
+    <main id="main" class="min-w-0 flex-1 p-4 md:p-6">
+        @RenderBody()
+    </main>
+    <script>
+        (function () {
+            var b = document.getElementById('menu-button'), n = document.getElementById('admin-nav');
+            if (!b || !n) return;
+            b.addEventListener('click', function () {
+                var open = n.classList.toggle('hidden') === false;
+                b.setAttribute('aria-expanded', open);
+            });
+        })();
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
